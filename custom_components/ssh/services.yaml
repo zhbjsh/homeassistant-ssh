@@ -1,0 +1,72 @@
+turn_on:
+  name: Turn on
+  description: "Turn the device on."
+  target:
+    device:
+      integration: ssh
+    entity:
+      integration: ssh
+
+turn_off:
+  name: Turn off
+  description: "Turn the device off."
+  target:
+    device:
+      integration: ssh
+    entity:
+      integration: ssh
+
+execute_command:
+  name: Execute command
+  description: "Execute a command on the device. Event: `ssh_command_executed`."
+  target:
+    device:
+      integration: ssh
+    entity:
+      integration: ssh
+  fields:
+    command:
+      name: Command
+      description: Command to execute.
+      required: true
+      example: "echo 'Hello world'"
+      selector:
+        text:
+    context:
+      name: Context
+      description: Variables to format the command.
+      selector:
+        object:
+
+call_service:
+  name: Call service
+  description: "Call a service on the device."
+  target:
+    device:
+      integration: ssh
+    entity:
+      integration: ssh
+  fields:
+    key:
+      name: Key
+      description: Key of the service to call.
+      required: true
+      example: "turn_off"
+      selector:
+        text:
+    context:
+      name: Context
+      description: Variables to format the command.
+      selector:
+        object:
+
+poll_sensor:
+  name: Poll sensor
+  description: Poll a sensor on the device.
+  target:
+    entity:
+      integration: ssh
+      domain:
+        - sensor
+        - binary_sensor
+        - switch

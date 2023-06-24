@@ -1,0 +1,71 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "add_host_keys": "Add unknown host key to host keys file",
+          "host": "[%key:common::config_flow::data::host%]",
+          "default_command_set": "Default command set",
+          "ssh_user": "SSH user",
+          "ssh_password": "SSH password",
+          "ssh_port": "SSH port",
+          "ssh_key_file": "SSH key file",
+          "ssh_host_keys_file": "SSH host keys file"
+        }
+      },
+      "mac_address": {
+        "title": "MAC address",
+        "description": "Please enter the MAC address of the device",
+        "data": {
+          "mac_address": "MAC address"
+        }
+      },
+      "name": {
+        "title": "Name",
+        "description": "Please enter a name for the device",
+        "data": {
+          "name": "[%key:common::config_flow::data::name%]"
+        }
+      },
+      "reauth_confirm": {
+        "title": "[%key:common::config_flow::title::reauth%]",
+        "description": "SSH authentication failed, please update your configuration"
+      }
+    },
+    "error": {
+      "permission_error": "Can't read/write host keys file",
+      "offline_error": "Device is offline",
+      "ssh_host_key_unknown_error": "Host key is unknown",
+      "ssh_auth_error": "SSH authentication failed",
+      "ssh_connect_error": "SSH connection failed",
+      "mac_address_invalid_error": "MAC address is invalid",
+      "name_exists_error": "Name exists already",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
+    },
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "allow_turn_off": "Allow to turn the device off by power button and 'turn_off' service",
+          "update_interval": "Update interval",
+          "ping_timeout": "Ping timeout",
+          "ssh_timeout": "SSH timeout",
+          "command_timeout": "Command timeout",
+          "service_commands": "Service commands",
+          "sensor_commands": "Sensor commands"
+        }
+      }
+    },
+    "error": {
+      "service_commands_invalid_error": "Service commands are invalid",
+      "sensor_commands_invalid_error": "Sensor commands are invalid",
+      "sensor_name_key_error": "Sensor name and key not defined",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
+    }
+  }
+}

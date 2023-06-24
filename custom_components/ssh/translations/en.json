@@ -1,0 +1,71 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Device is already configured",
+            "reauth_successful": "Re-authentication was successful"
+        },
+        "error": {
+            "mac_address_invalid_error": "MAC address is invalid",
+            "name_exists_error": "Name exists already",
+            "offline_error": "Device is offline",
+            "permission_error": "Can't read/write host keys file",
+            "ssh_auth_error": "SSH authentication failed",
+            "ssh_connect_error": "SSH connection failed",
+            "ssh_host_key_unknown_error": "Host key is unknown",
+            "unknown": "Unexpected error"
+        },
+        "step": {
+            "mac_address": {
+                "data": {
+                    "mac_address": "MAC address"
+                },
+                "description": "Please enter the MAC address of the device",
+                "title": "MAC address"
+            },
+            "name": {
+                "data": {
+                    "name": "Name"
+                },
+                "description": "Please enter a name for the device",
+                "title": "Name"
+            },
+            "reauth_confirm": {
+                "description": "SSH authentication failed, please update your configuration",
+                "title": "Reauthenticate Integration"
+            },
+            "user": {
+                "data": {
+                    "add_host_keys": "Add unknown host key to host keys file",
+                    "default_command_set": "Default command set",
+                    "host": "Host",
+                    "ssh_host_keys_file": "SSH host keys file",
+                    "ssh_key_file": "SSH key file",
+                    "ssh_password": "SSH password",
+                    "ssh_port": "SSH port",
+                    "ssh_user": "SSH user"
+                }
+            }
+        }
+    },
+    "options": {
+        "error": {
+            "sensor_commands_invalid_error": "Sensor commands are invalid",
+            "sensor_name_key_error": "Sensor name and key not defined",
+            "service_commands_invalid_error": "Service commands are invalid",
+            "unknown": "Unexpected error"
+        },
+        "step": {
+            "init": {
+                "data": {
+                    "allow_turn_off": "Allow to turn the device off by power button and 'turn_off' service",
+                    "command_timeout": "Command timeout",
+                    "ping_timeout": "Ping timeout",
+                    "sensor_commands": "Sensor commands",
+                    "service_commands": "Service commands",
+                    "ssh_timeout": "SSH timeout",
+                    "update_interval": "Update interval"
+                }
+            }
+        }
+    }
+}

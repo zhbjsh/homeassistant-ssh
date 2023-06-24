@@ -1,0 +1,19 @@
+{
+  "domain": "ssh",
+  "name": "Device",
+  "version": "0.1.5",
+  "codeowners": [
+    "@zhbjsh"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/zhbjsh/homeassistant-ssh",
+  "homekit": {},
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/zhbjsh/homeassistant-ssh/issues",
+  "requirements": [
+    "ssh-remote-control == 0.1.5"
+  ],
+  "ssdp": [],
+  "zeroconf": []
+}
