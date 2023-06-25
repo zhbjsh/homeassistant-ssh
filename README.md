@@ -46,11 +46,11 @@ The interval in seconds between updates of the device state (shown by the binary
 
 #### Action commands
 
-Commands used to generate services and button entities in Home Assistant ([details](#)).
+Commands used to generate services and button entities in Home Assistant ([details](#action-commands-examples)).
 
 #### Sensor commands
 
-Commands used to generate sensor, binary sensor and switch entities in Home Assistant ([details](#sensor-commands-1)).
+Commands used to generate sensor, binary sensor and switch entities in Home Assistant ([details](#sensor-commands-examples)).
 
 ## Commands
 
@@ -66,11 +66,11 @@ Insert sensor values of the device by writing sensor keys in curly braces.
 
 #### Context
 
-If you put a variable in curly braces that is not the key of a sensor, you have to provide it with a `context` dictionary when executing the command. This is is only possible for action commands and not for sensor commands. If a action requires context, it won't appear as button entity in Home Assistant and can only be executed with [`call_service`](#service-sshcall_service).
+If you put a variable in curly braces that is not the key of a sensor, you have to provide it with a `context` dictionary when executing the command. This is is only possible for action commands and not for sensor commands. If a action requires context, it won't appear as button entity in Home Assistant and can only be executed with [`run_action`](#service-sshrun_action).
 
 ### Action commands ([examples](#service-command-examples))
 
-When a action command doesn't require [context](#context), it will appear as button entity in Home Assistant. Action commands with context can be executed with [`call_service`](#service-sshcall_service).
+When a action command doesn't require [context](#context), it will appear as button entity in Home Assistant. Action commands with context can be executed with [`run_action`](#service-sshrun_action).
 
 | Name           | Description                | Type    | Required |
 | -------------- | -------------------------- | ------- | -------- |
@@ -215,7 +215,7 @@ Execute a command on the device. Event: `ssh_command_executed`.
 | `command`      | Command to execute              | string  | yes      |
 | `context`      | Variables to format the command | mapping | no       |
 
-### Service `ssh.call_service`
+### Service `ssh.run_action`
 
 Run an action command on the device.
 
