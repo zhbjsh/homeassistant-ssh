@@ -1,7 +1,7 @@
 """Platform for button integration."""
 from __future__ import annotations
 
-from ssh_remote_control import ServiceKey
+from ssh_remote_control import ActionKey
 
 from homeassistant.components.button import ENTITY_ID_FORMAT, ButtonEntity
 from homeassistant.config_entries import ConfigEntry
@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import EntryData
-from .base_entity import BaseEntity, BaseServiceEntity
+from .base_entity import BaseActionEntity, BaseEntity
 from .const import DOMAIN
 
 
@@ -23,21 +23,21 @@ async def async_setup_entry(
 
     entities = [PowerEntity(entry_data.state_coordinator, config_entry)]
 
-    for command in entry_data.remote.service_commands:
+    for command in entry_data.remote.action_commands:
         if command.get_context_keys(entry_data.remote):
             continue
-        if command.key == ServiceKey.TURN_OFF:
+        if command.key == ActionKey.TURN_OFF:
             continue
         entities.append(Entity(entry_data.state_coordinator, config_entry, command))
 
     async_add_entities(entities)
 
 
-class Entity(BaseServiceEntity, ButtonEntity):
+class Entity(BaseActionEntity, ButtonEntity):
     _entity_id_format = ENTITY_ID_FORMAT
 
     async def async_press(self) -> None:
-        await self.coordinator.async_call_service(self.key)
+        await self.coordinator.async_run_action(self.key)
 
 
 class PowerEntity(BaseEntity, ButtonEntity):
@@ -56,7 +56,7 @@ class PowerEntity(BaseEntity, ButtonEntity):
         if (
             self._remote.state.is_connected
             and self._remote.allow_turn_off
-            and ServiceKey.TURN_OFF in self._remote.service_commands_by_key
+            and ActionKey.TURN_OFF in self._remote.action_commands_by_key
         ):
             return True
 

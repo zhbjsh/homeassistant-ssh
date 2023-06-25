@@ -1,6 +1,6 @@
 # SSH Integration for Home Assistant
 
-This integration allows you to control and monitor devices in Home Assistant through a SSH connection.
+This integration allows you to control and monitor devices in Home Assistant by executing commands via SSH connection.
 
 ### Features
 
@@ -38,15 +38,15 @@ Each device can be configured individually by clicking on its _Configure_ button
 
 #### Allow to turn the device off
 
-After enabling this option, you can use the power button and the `turn_off` service to turn the device off.
+After enabling this option, you can use the power button and the [`turn_off`](#service-sshturn_off) service to turn the device off.
 
 #### Update interval
 
 The interval in seconds between updates of the device state (shown by the binary sensors _Network_ and _SSH_).
 
-#### Service commands
+#### Action commands
 
-Commands used to generate services and button entities in Home Assistant ([details](#service-commands-1)).
+Commands used to generate services and button entities in Home Assistant ([details](#)).
 
 #### Sensor commands
 
@@ -66,61 +66,61 @@ Insert sensor values of the device by writing sensor keys in curly braces.
 
 #### Context
 
-If you put something in curly braces that is not the key of a sensor, you have to provide it with a `context` dictionary when executing the command. This is is only possible for service commands and not for sensor commands. If a service requires context, it won't appear as button entity in Home Assistant and can only be executed with `call_service`.
+If you put a variable in curly braces that is not the key of a sensor, you have to provide it with a `context` dictionary when executing the command. This is is only possible for action commands and not for sensor commands. If a action requires context, it won't appear as button entity in Home Assistant and can only be executed with [`call_service`](#service-sshcall_service).
 
-### Service commands ([examples](#service-command-examples))
+### Action commands ([examples](#service-command-examples))
 
-As long as a service command doesn't require any context, its service will appear as a button entity in Home Assistant. In case the command does require context, the service can be used by calling the `call_service` service with the key and context.
+When a action command doesn't require [context](#context), it will appear as button entity in Home Assistant. Action commands with context can be executed with [`call_service`](#service-sshcall_service).
 
-| Name           | Description                 | Type    | Required     |
-| -------------- | --------------------------- | ------- | ------------ |
-| `command`      | Command to execute          | string  | yes          |
-| `name`         | Name of the service         | string  | no           |
-| `key`          | Key of the service          | string  | (if no name) |
-| `timeout`      | Timeout of the command      | integer | no           |
-| `device_class` | Device class of the service | string  | no           |
-| `icon`         | Icon of the service         | string  | no           |
+| Name           | Description                | Type    | Required |
+| -------------- | -------------------------- | ------- | -------- |
+| `command`      | Command to execute         | string  | yes      |
+| `name`         | Name of the action         | string  | no       |
+| `key`          | Key of the action          | string  | no       |
+| `timeout`      | Timeout of the command     | integer | no       |
+| `device_class` | Device class of the action | string  | no       |
+| `icon`         | Icon of the action         | string  | no       |
 
 ### Sensor commands ([examples](#sensor-command-examples))
 
-Every sensor command contains a list of one or more sensors. These sensors will be updated every time the command executes. This happens when the device connects, when the `scan_interval` has passed or when one of the sensors gets polled manually by the `poll_sensor` service.
+Sensor commands contain a list of one or more sensors that will be updated every time the command executes. This happens when the device connects, when the `scan_interval` has passed or when one of the sensors gets polled manually with [`poll_sensor`](#service-sshpoll_sensor).
 
 | Name            | Description                                       | Type    | Required |
 | --------------- | ------------------------------------------------- | ------- | -------- |
 | `command`       | Command to execute                                | string  | yes      |
-| `sensors`       | Sensors extracted from the output of this command | list    | yes      |
 | `timeout`       | Timeout of the command                            | integer | no       |
 | `scan_interval` | Scan interval of the sensor command               | integer | no       |
+| `sensors`       | Sensors extracted from the output of this command | list    | yes      |
 
 ### Sensors
 
-As long as the `value_type` of a sensor is not set to `bool`, it will appear as a sensor entity in Home Assistant. If it is set to `bool`, either a binary sensor or a switch entity will appear (switches need to have both `on_command` and `off_command` defined).
+If the `value_type` of a sensor is not set to `bool`, it will appear as sensor entity in Home Assistant. Otherwise either a binary sensor or a switch entity will be generated (switches need to have both `on_command` and `off_command`).
 
 #### Static sensors ([examples](#number-of-logged-in-users-single-static-sensor))
 
-Static sensors are created by default. There can be multiple static sensors per sensor command and each line of the command output is used to get the value for one of them. Thats why static sensors need to be defined in the same order as they appear in the command output.
+Static sensors are created by default. They can extract a fixed number of values from the command output. There can be multiple static sensors per sensor command and each line of the command output is used to get the value for one of them. Static sensors must be defined in the same order as they appear in the command output.
 
 #### Dynamic sensors ([examples](#files-in-backup-folder-dynamic-sensor))
 
-Dynamic sensors are created by setting `dynamic: true` and there can only be one dynamic sensor per sensor command. Each line of the command output is used to get the name and value of one "child sensor". Names and values must be separated by either one or more spaces or a `separator` defined in the dynamic sensor. All child sensors of a dynamic sensor share the attributes of their "parent" (`value_type`, `unit_of_measurement` and so on).
+Dynamic sensors are created by setting `dynamic: true`. They can extract a variable number of values from the command output. There can only be one dynamic sensor per sensor command. Each line of the command output is used to get value and name of one "child sensor". Values and names must be separated by either one or more spaces or a `separator` defined in the dynamic sensor. All child sensors of a dynamic sensor share the attributes of their "parent" (`value_type`, `unit_of_measurement`, etc.).
 
-| Name                  | Description                                                               | Type                   | Required     |
-| --------------------- | ------------------------------------------------------------------------- | ---------------------- | ------------ |
-| `name`                | Name of the sensor                                                        | string                 | no           |
-| `key`                 | Key of the sensor                                                         | string                 | (if no name) |
-| `dynamic`             | Set to `true` to create a dynamic sensor                                  | boolean                | no           |
-| `value_type`          | Value type of the sensor, set to `bool` to create a binary sensor         | `int`, `float`, `bool` | no           |
-| `unit_of_measurement` | Unit of the sensor                                                        | string                 | no           |
-| `value_template`      | Template to generate the sensor value from the command output             | string                 | no           |
-| `command_on`          | Command to switch the sensor on<br/>(only works with `value_type: bool`)  | string                 | no           |
-| `command_off`         | Command to switch the sensor off<br/>(only works with `value_type: bool`) | string                 | no           |
-| `payload_on`          | String to detect a `true` value<br/>(only works with `value_type: bool`)  | string                 | no           |
-| `payload_off`         | String to detect a `false` value<br/>(only works with `value_type: bool`) | string                 | no           |
-| `separator`           | Separator between names and values<br/>(only works with `dynamic: true`)  | string                 | no           |
-| `device_class`        | Device class of the sensor                                                | string                 | no           |
-| `icon`                | Icon of the sensor                                                        | string                 | no           |
+| Name                  | Description                                                           | Type                   | Required |
+| --------------------- | --------------------------------------------------------------------- | ---------------------- | -------- |
+| `name`                | Name of the sensor                                                    | string                 | no       |
+| `key`                 | Key of the sensor                                                     | string                 | no       |
+| `dynamic`             | Set to `true` to create a dynamic sensor                              | boolean                | no       |
+| `separator`           | Separator between names and values (only works with `dynamic: true`)  | string                 | no       |
+| `value_type`          | Value type of the sensor, set to `bool` to create a binary sensor     | `int`, `float`, `bool` | no       |
+| `unit_of_measurement` | Unit of the sensor                                                    | string                 | no       |
+| `value_template`      | Template to generate the sensor value from the command output         | string                 | no       |
+| `command_on`          | Command to switch the sensor on (only works with `value_type: bool`)  | string                 | no       |
+| `command_off`         | Command to switch the sensor off (only works with `value_type: bool`) | string                 | no       |
+| `payload_on`          | String to detect a `true` value (only works with `value_type: bool`)  | string                 | no       |
+| `payload_off`         | String to detect a `false` value (only works with `value_type: bool`) | string                 | no       |
+| `device_class`        | Device class of the sensor                                            | string                 | no       |
+| `icon`                | Icon of the sensor                                                    | string                 | no       |
 
-### Service command examples
+### Action command examples
 
 #### Backup a folder
 
@@ -181,7 +181,7 @@ sensors:
     device_class: data_size
 ```
 
-#### Some systemd services (dynamic sensor with switch commands)
+#### Systemd services (dynamic sensor with switch commands)
 
 ```yaml
 command: systemctl -a | awk '/bluetooth.service|smbd.service/ {{print $4 "|" $1}}'
@@ -195,3 +195,35 @@ sensors:
     payload_on: running
     separator: "|"
 ```
+
+## Services
+
+### Service `ssh.turn_on`
+
+Turn the device on.
+
+### Service `ssh.turn_off`
+
+Turn the device off.
+
+### Service `ssh.execute_command`
+
+Execute a command on the device. Event: `ssh_command_executed`.
+
+| Data attribute | Description                     | Type    | Required |
+| -------------- | ------------------------------- | ------- | -------- |
+| `command`      | Command to execute              | string  | yes      |
+| `context`      | Variables to format the command | mapping | no       |
+
+### Service `ssh.call_service`
+
+Run an action command on the device.
+
+| Data attribute | Description                     | Type    | Required |
+| -------------- | ------------------------------- | ------- | -------- |
+| `key`          | Key of the action command       | string  | yes      |
+| `context`      | Variables to format the command | mapping | no       |
+
+### Service `ssh.poll_sensor`
+
+Poll a sensor on the device.

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from ssh_remote_control import (
+    ActionCommand,
+    ActionKey,
     Command,
     CommandSet,
     DynamicSensor,
@@ -8,8 +10,6 @@ from ssh_remote_control import (
     Sensor,
     SensorCommand,
     SensorKey,
-    ServiceCommand,
-    ServiceKey,
 )
 
 from homeassistant.components.button import ButtonDeviceClass
@@ -32,19 +32,19 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 
 from .const import (
+    CONF_ACTION_COMMANDS,
     CONF_DYNAMIC,
     CONF_KEY,
     CONF_SENSOR_COMMANDS,
     CONF_SENSORS,
     CONF_SEPARATOR,
-    CONF_SERVICE_COMMANDS,
     CONF_SUGGESTED_UNIT_OF_MEASUREMENT,
     CONF_VALUE_TYPE,
 )
 from .helpers import get_command_renderer, get_value_renderer
 
-DEFAULT_SERVICE_OPTIONS: dict[str, dict] = {
-    ServiceKey.RESTART: {CONF_DEVICE_CLASS: ButtonDeviceClass.RESTART},
+DEFAULT_ACTION_OPTIONS: dict[str, dict] = {
+    ActionKey.RESTART: {CONF_DEVICE_CLASS: ButtonDeviceClass.RESTART},
 }
 
 DEFAULT_SENSOR_OPTIONS: dict[str, dict] = {
@@ -84,7 +84,7 @@ SENSOR_OPTIONS_KEYS = (
     CONF_ENABLED,
 )
 
-SERVICE_OPTIONS_KEYS = (CONF_DEVICE_CLASS, CONF_ICON, CONF_ENABLED)
+ACTION_OPTIONS_KEYS = (CONF_DEVICE_CLASS, CONF_ICON, CONF_ENABLED)
 
 
 def _remove_none_items(data: dict) -> dict:
@@ -99,7 +99,7 @@ def _string_to_value_type(string: str) -> type:
     return {"int": int, "float": float, "bool": bool}.get(string)
 
 
-def _service_command_to_conf(command: ServiceCommand) -> dict:
+def _action_command_to_conf(command: ActionCommand) -> dict:
     return _remove_none_items(
         {
             CONF_COMMAND: command.string,
@@ -110,14 +110,14 @@ def _service_command_to_conf(command: ServiceCommand) -> dict:
     )
 
 
-def _conf_to_service_command(hass: HomeAssistant, data: dict) -> ServiceCommand:
-    options = DEFAULT_SERVICE_OPTIONS.get(data.get(CONF_KEY), {})
+def _conf_to_action_command(hass: HomeAssistant, data: dict) -> ActionCommand:
+    options = DEFAULT_ACTION_OPTIONS.get(data.get(CONF_KEY), {})
 
-    for key in SERVICE_OPTIONS_KEYS:
+    for key in ACTION_OPTIONS_KEYS:
         if key in data:
             options[key] = data[key]
 
-    return ServiceCommand(
+    return ActionCommand(
         data[CONF_COMMAND],
         data.get(CONF_NAME),
         data.get(CONF_KEY),
@@ -199,9 +199,9 @@ def _conf_to_sensor_command(hass: HomeAssistant, data: dict) -> SensorCommand:
     )
 
 
-def get_service_commands_conf(remote: Remote) -> list[dict]:
-    """Get service commands conf."""
-    return [_service_command_to_conf(command) for command in remote.service_commands]
+def get_action_commands_conf(remote: Remote) -> list[dict]:
+    """Get action commands conf."""
+    return [_action_command_to_conf(command) for command in remote.action_commands]
 
 
 def get_sensor_commands_conf(remote: Remote) -> list[dict]:
@@ -214,8 +214,8 @@ def get_command_set(hass: HomeAssistant, options: dict) -> CommandSet:
     return CommandSet(
         "",
         [
-            _conf_to_service_command(hass, command_data)
-            for command_data in options[CONF_SERVICE_COMMANDS]
+            _conf_to_action_command(hass, command_data)
+            for command_data in options[CONF_ACTION_COMMANDS]
         ],
         [
             _conf_to_sensor_command(hass, command_data)

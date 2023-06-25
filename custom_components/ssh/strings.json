@@ -56,13 +56,13 @@
           "ping_timeout": "Ping timeout",
           "ssh_timeout": "SSH timeout",
           "command_timeout": "Command timeout",
-          "service_commands": "Service commands",
+          "action_commands": "Action commands",
           "sensor_commands": "Sensor commands"
         }
       }
     },
     "error": {
-      "service_commands_invalid_error": "Service commands are invalid",
+      "action_commands_invalid_error": "Action commands are invalid",
       "sensor_commands_invalid_error": "Sensor commands are invalid",
       "sensor_name_key_error": "Sensor name and key not defined",
       "unknown": "[%key:common::config_flow::error::unknown%]"

@@ -41,9 +41,9 @@ from .const import (
     CONF_SSH_USER,
     CONF_UPDATE_INTERVAL,
     DOMAIN,
-    SERVICE_CALL_SERVICE,
     SERVICE_EXECUTE_COMMAND,
     SERVICE_POLL_SENSOR,
+    SERVICE_RUN_ACTION,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
@@ -69,7 +69,7 @@ EXECUTE_COMMAND_SCHEMA = vol.Schema(
     }
 )
 
-CALL_SERVICE_SCHEMA = vol.Schema(
+RUN_ACTION_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_KEY): str,
         vol.Optional(CONF_CONTEXT): dict,
@@ -172,16 +172,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if tasks:
             await asyncio.wait(tasks)
 
-    async def call_service(call: ServiceCall):
+    async def run_action(call: ServiceCall):
         config_entry_ids = await async_extract_config_entry_ids(hass, call)
-        service_key = call.data[CONF_KEY]
+        action_key = call.data[CONF_KEY]
         context = call.data.get(CONF_CONTEXT)
         tasks = []
 
         for entry_id in config_entry_ids:
             entry_data: EntryData = hass.data[DOMAIN][entry_id]
             tasks.append(
-                entry_data.state_coordinator.async_call_service(service_key, context)
+                entry_data.state_coordinator.async_run_action(action_key, context)
             )
 
         if tasks:
@@ -240,9 +240,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.services.async_register(
         DOMAIN,
-        SERVICE_CALL_SERVICE,
-        call_service,
-        CALL_SERVICE_SCHEMA,
+        SERVICE_RUN_ACTION,
+        run_action,
+        RUN_ACTION_SCHEMA,
     )
 
     hass.services.async_register(

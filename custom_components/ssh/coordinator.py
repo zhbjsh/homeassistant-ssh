@@ -101,11 +101,11 @@ class StateCoordinator(DataUpdateCoordinator):
         )
 
     @log_errors
-    async def async_call_service(
-        self, service_key: str, context: dict | None = None
+    async def async_run_action(
+        self, action_key: str, context: dict | None = None
     ) -> None:
-        """Call a service."""
-        await self.remote.async_call_service(service_key, context)
+        """Run an action."""
+        await self.remote.async_run_action(action_key, context)
 
     @log_errors
     async def async_poll_sensors(self, sensor_keys: list[str]) -> None:
@@ -156,7 +156,6 @@ class SensorCommandCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> None:
         if not self.remote.state.is_connected:
             return
-
         try:
             await self.remote.async_execute_command(self.command)
         except (CommandFormatError, CommandExecuteError):

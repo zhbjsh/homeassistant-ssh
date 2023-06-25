@@ -51,6 +51,7 @@ from homeassistant.helpers.selector import (
 )
 
 from .const import (
+    CONF_ACTION_COMMANDS,
     CONF_ADD_HOST_KEYS,
     CONF_ALLOW_TURN_OFF,
     CONF_COMMAND_TIMEOUT,
@@ -61,7 +62,6 @@ from .const import (
     CONF_SENSOR_COMMANDS,
     CONF_SENSORS,
     CONF_SEPARATOR,
-    CONF_SERVICE_COMMANDS,
     CONF_SSH_HOST_KEYS_FILE,
     CONF_SSH_KEY_FILE,
     CONF_SSH_PASSWORD,
@@ -74,9 +74,9 @@ from .const import (
     DOMAIN,
 )
 from .options_converter import (
+    get_action_commands_conf,
     get_command_set,
     get_sensor_commands_conf,
-    get_service_commands_conf,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ _LOGGER = logging.getLogger(__name__)
 DEFAULT_UPDATE_INTERVAL = 30
 DEFAULT_HOST_KEYS_FILENAME = ".ssh_known_hosts"
 
-SERVICE_COMMAND_SCHEMA = vol.Schema(
+ACTION_COMMAND_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_COMMAND): str,
         vol.Optional(CONF_NAME): str,
@@ -166,11 +166,11 @@ def validate_mac_address(mac_address: str):
 
 def validate_options(hass: HomeAssistant, options: dict[str, Any]) -> dict[str, Any]:
     """Validate the options user input."""
-    for command_data in options[CONF_SERVICE_COMMANDS]:
+    for command_data in options[CONF_ACTION_COMMANDS]:
         try:
-            SERVICE_COMMAND_SCHEMA(command_data)
+            ACTION_COMMAND_SCHEMA(command_data)
         except vol.Error as exc:
-            raise ServiceCommandsInvalidError from exc
+            raise ActionCommandsInvalidError from exc
 
     for command_data in options[CONF_SENSOR_COMMANDS]:
         try:
@@ -222,7 +222,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         CONF_PING_TIMEOUT: remote.ping_timeout,
         CONF_SSH_TIMEOUT: remote.ssh_timeout,
         CONF_COMMAND_TIMEOUT: remote.command_timeout,
-        CONF_SERVICE_COMMANDS: get_service_commands_conf(remote),
+        CONF_ACTION_COMMANDS: get_action_commands_conf(remote),
         CONF_SENSOR_COMMANDS: get_sensor_commands_conf(remote),
     }
 
@@ -245,8 +245,8 @@ class OptionsFlow(config_entries.OptionsFlow):
             self._data = user_input
             try:
                 options = validate_options(self.hass, user_input)
-            except ServiceCommandsInvalidError:
-                errors["base"] = "service_commands_invalid_error"
+            except ActionCommandsInvalidError:
+                errors["base"] = "action_commands_invalid_error"
             except SensorCommandsInvalidError:
                 errors["base"] = "sensor_commands_invalid_error"
             except ValueError:
@@ -283,8 +283,8 @@ class OptionsFlow(config_entries.OptionsFlow):
                         default=self._data[CONF_COMMAND_TIMEOUT],
                     ): int,
                     vol.Required(
-                        CONF_SERVICE_COMMANDS,
-                        default=self._data[CONF_SERVICE_COMMANDS],
+                        CONF_ACTION_COMMANDS,
+                        default=self._data[CONF_ACTION_COMMANDS],
                     ): ObjectSelector(),
                     vol.Required(
                         CONF_SENSOR_COMMANDS,
@@ -488,8 +488,8 @@ class MACAddressInvalidError(Exception):
     """Error to indicate MAC address is invalid."""
 
 
-class ServiceCommandsInvalidError(Exception):
-    """Error to indicate service commands are invalid."""
+class ActionCommandsInvalidError(Exception):
+    """Error to indicate action commands are invalid."""
 
 
 class SensorCommandsInvalidError(Exception):

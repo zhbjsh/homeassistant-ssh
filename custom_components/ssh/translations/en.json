@@ -49,19 +49,19 @@
     },
     "options": {
         "error": {
+            "action_commands_invalid_error": "Action commands are invalid",
             "sensor_commands_invalid_error": "Sensor commands are invalid",
             "sensor_name_key_error": "Sensor name and key not defined",
-            "service_commands_invalid_error": "Service commands are invalid",
             "unknown": "Unexpected error"
         },
         "step": {
             "init": {
                 "data": {
+                    "action_commands": "Action commands",
                     "allow_turn_off": "Allow to turn the device off by power button and 'turn_off' service",
                     "command_timeout": "Command timeout",
                     "ping_timeout": "Ping timeout",
                     "sensor_commands": "Sensor commands",
-                    "service_commands": "Service commands",
                     "ssh_timeout": "SSH timeout",
                     "update_interval": "Update interval"
                 }

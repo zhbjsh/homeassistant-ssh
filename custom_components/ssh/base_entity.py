@@ -1,6 +1,6 @@
 from typing import Any
 
-from ssh_remote_control import Sensor, ServiceCommand, State
+from ssh_remote_control import ActionCommand, Sensor, State
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_DEVICE_CLASS, CONF_ENABLED, CONF_ICON
@@ -72,12 +72,12 @@ class BaseEntity(CoordinatorEntity):
         self._remote.state.on_change.unsubscribe(self._handle_remote_state_change)
 
 
-class BaseServiceEntity(BaseEntity):
+class BaseActionEntity(BaseEntity):
     def __init__(
         self,
         state_coordinator: StateCoordinator,
         config_entry: ConfigEntry,
-        command: ServiceCommand,
+        command: ActionCommand,
     ) -> None:
         self._command = command
         super().__init__(state_coordinator, config_entry, command.options)

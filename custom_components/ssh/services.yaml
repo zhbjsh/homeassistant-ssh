@@ -38,9 +38,9 @@ execute_command:
       selector:
         object:
 
-call_service:
-  name: Call service
-  description: "Call a service on the device."
+run_action:
+  name: Run action
+  description: "Run an action on the device."
   target:
     device:
       integration: ssh
@@ -49,7 +49,7 @@ call_service:
   fields:
     key:
       name: Key
-      description: Key of the service to call.
+      description: Key of the action.
       required: true
       example: "turn_off"
       selector:
