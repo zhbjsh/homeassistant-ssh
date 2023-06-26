@@ -33,12 +33,15 @@ from homeassistant.core import HomeAssistant
 
 from .const import (
     CONF_ACTION_COMMANDS,
+    CONF_COMMAND_SET,
     CONF_DYNAMIC,
     CONF_KEY,
     CONF_SENSOR_COMMANDS,
     CONF_SENSORS,
     CONF_SEPARATOR,
     CONF_SUGGESTED_UNIT_OF_MEASUREMENT,
+    CONF_VALUE_MAX,
+    CONF_VALUE_MIN,
     CONF_VALUE_TYPE,
 )
 from .helpers import get_command_renderer, get_value_renderer
@@ -137,9 +140,12 @@ def _sensor_to_conf(sensor: Sensor) -> dict:
             if isinstance(sensor, DynamicSensor)
             else None,
             CONF_VALUE_TYPE: _value_type_to_string(sensor.value_type),
+            CONF_VALUE_MIN: sensor.value_min,
+            CONF_VALUE_MAX: sensor.value_max,
             CONF_UNIT_OF_MEASUREMENT: sensor.value_unit,
-            CONF_COMMAND_ON: sensor.switch_on.string if sensor.switch_on else None,
-            CONF_COMMAND_OFF: sensor.switch_off.string if sensor.switch_off else None,
+            CONF_COMMAND_SET: sensor.command_set,
+            CONF_COMMAND_ON: sensor.command_on.string if sensor.command_on else None,
+            CONF_COMMAND_OFF: sensor.command_off.string if sensor.command_off else None,
             CONF_PAYLOAD_ON: sensor.payload_on,
             CONF_PAYLOAD_OFF: sensor.payload_off,
         }
@@ -158,13 +164,18 @@ def _conf_to_sensor(hass: HomeAssistant, data: dict) -> Sensor | DynamicSensor:
         data.get(CONF_KEY),
         value_type=_string_to_value_type(data.get(CONF_VALUE_TYPE)),
         value_unit=data.get(CONF_UNIT_OF_MEASUREMENT),
+        value_min=data.get(CONF_VALUE_MIN),
+        value_max=data.get(CONF_VALUE_MAX),
         value_renderer=get_value_renderer(hass, value_template)
         if (value_template := data.get(CONF_VALUE_TEMPLATE))
         else None,
-        switch_on=Command(data[CONF_COMMAND_ON], renderer=get_command_renderer(hass))
+        command_set=Command(data[CONF_COMMAND_SET], renderer=get_command_renderer(hass))
+        if data.get(CONF_COMMAND_SET)
+        else None,
+        command_on=Command(data[CONF_COMMAND_ON], renderer=get_command_renderer(hass))
         if data.get(CONF_COMMAND_ON)
         else None,
-        switch_off=Command(data[CONF_COMMAND_OFF], renderer=get_command_renderer(hass))
+        command_off=Command(data[CONF_COMMAND_OFF], renderer=get_command_renderer(hass))
         if data.get(CONF_COMMAND_OFF)
         else None,
         payload_on=data.get(CONF_PAYLOAD_ON),

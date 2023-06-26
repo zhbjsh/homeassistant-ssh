@@ -42,7 +42,7 @@ async def async_setup_entry(
     ]
 
     for sensor in entry_data.remote.sensors_by_key.values():
-        if sensor.value_type is not bool or sensor.is_switchable:
+        if sensor.value_type is not bool or sensor.is_controllable:
             continue
         if isinstance(sensor, DynamicSensor):
             sensor.on_child_added.subscribe(child_added_listener)

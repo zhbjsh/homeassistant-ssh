@@ -1,11 +1,9 @@
-"""Platform for switch integration."""
+"""Platform for text integration."""
 from __future__ import annotations
-
-from typing import Any
 
 from ssh_remote_control import DynamicSensor
 
-from homeassistant.components.switch import ENTITY_ID_FORMAT, SwitchEntity
+from homeassistant.components.text import ENTITY_ID_FORMAT, TextEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_platform
@@ -22,7 +20,7 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the SSH switch platform."""
+    """Set up the SSH text platform."""
     platform = entity_platform.async_get_current_platform()
     entry_data: EntryData = hass.data[DOMAIN][config_entry.entry_id]
 
@@ -37,7 +35,7 @@ async def async_setup_entry(
     entities = []
 
     for sensor in entry_data.remote.sensors_by_key.values():
-        if not (sensor.value_type is bool and sensor.is_controllable):
+        if not (sensor.value_type is str and sensor.is_controllable):
             continue
         if isinstance(sensor, DynamicSensor):
             sensor.on_child_added.subscribe(child_added_listener)
@@ -48,15 +46,24 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class Entity(BaseSensorEntity, SwitchEntity):
+class Entity(BaseSensorEntity, TextEntity):
     _entity_id_format = ENTITY_ID_FORMAT
 
     @property
-    def is_on(self) -> bool | None:
+    def native_value(self) -> str | None:
         return self._sensor.value
 
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        await self.coordinator.async_set_sensor_value(self.key, True)
+    @property
+    def native_max(self) -> int:
+        if self._sensor.value_max is None:
+            return 100
+        return int(self._sensor.value_max)
 
-    async def async_turn_off(self, **kwargs: Any) -> None:
-        await self.coordinator.async_set_sensor_value(self.key, False)
+    @property
+    def native_min(self) -> int:
+        if self._sensor.value_min is None:
+            return 0
+        return int(self._sensor.value_min)
+
+    async def async_set_value(self, value: str) -> None:
+        await self.coordinator.async_set_sensor_value(self.key, value)

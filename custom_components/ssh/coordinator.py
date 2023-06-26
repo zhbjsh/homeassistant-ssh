@@ -113,14 +113,9 @@ class StateCoordinator(DataUpdateCoordinator):
         await self.remote.async_poll_sensors(sensor_keys)
 
     @log_errors
-    async def async_set_switch(self, sensor_key: str, value: bool) -> None:
-        """Set a switch."""
-        await self.remote.async_set_switch(sensor_key, value)
-
-    @log_errors
-    async def async_toggle_switch(self, sensor_key: str) -> None:
-        """Toggle a switch."""
-        await self.remote.async_toggle_switch(sensor_key)
+    async def async_set_sensor_value(self, sensor_key: str, value: bool) -> None:
+        """Set the value of a sensor."""
+        await self.remote.async_set_sensor_value(sensor_key, value)
 
     @log_errors
     async def async_turn_on(self) -> None:

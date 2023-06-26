@@ -46,7 +46,7 @@ The interval in seconds between updates of the device state (shown by the binary
 
 #### Action commands
 
-Commands used to generate services and button entities in Home Assistant ([details](#action-commands-examples)).
+Commands used to generate button entities in Home Assistant ([details](#action-commands-examples)).
 
 #### Sensor commands
 
