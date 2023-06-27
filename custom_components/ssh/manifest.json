@@ -1,6 +1,6 @@
 {
   "domain": "ssh",
-  "name": "Device",
+  "name": "SSH",
   "version": "0.1.8",
   "codeowners": [
     "@zhbjsh"
