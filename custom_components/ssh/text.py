@@ -3,8 +3,9 @@ from __future__ import annotations
 
 from ssh_remote_control import DynamicSensor
 
-from homeassistant.components.text import ENTITY_ID_FORMAT, TextEntity
+from homeassistant.components.text import ENTITY_ID_FORMAT, TextEntity, TextMode
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_MODE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -55,15 +56,23 @@ class Entity(BaseSensorEntity, TextEntity):
 
     @property
     def native_max(self) -> int:
-        if self._sensor.value_max is None:
-            return 100
-        return int(self._sensor.value_max)
+        if self._sensor.value_max is not None:
+            return int(self._sensor.value_max)
+        return 100
 
     @property
     def native_min(self) -> int:
-        if self._sensor.value_min is None:
-            return 0
-        return int(self._sensor.value_min)
+        if self._sensor.value_min is not None:
+            return int(self._sensor.value_min)
+        return 0
+
+    @property
+    def pattern(self) -> str | None:
+        return self._sensor.value_pattern
+
+    @property
+    def mode(self) -> TextMode:
+        return self._options.get(CONF_MODE, TextMode.TEXT)
 
     async def async_set_value(self, value: str) -> None:
-        await self.coordinator.async_set_sensor_value(self.key, value)
+        await self._remote.async_set_sensor_value(self.key, value)

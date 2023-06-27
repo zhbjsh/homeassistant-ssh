@@ -5,7 +5,7 @@
         "data": {
           "add_host_keys": "Add unknown host key to host keys file",
           "host": "[%key:common::config_flow::data::host%]",
-          "default_command_set": "Default command set",
+          "default_commands": "Default commands",
           "ssh_user": "SSH user",
           "ssh_password": "SSH password",
           "ssh_port": "SSH port",
@@ -62,9 +62,7 @@
       }
     },
     "error": {
-      "action_commands_invalid_error": "Action commands are invalid",
-      "sensor_commands_invalid_error": "Sensor commands are invalid",
-      "sensor_name_key_error": "Sensor name and key not defined",
+      "name_key_error": "Name and key not defined",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     }
   }

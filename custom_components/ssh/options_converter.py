@@ -3,8 +3,8 @@ from __future__ import annotations
 from ssh_remote_control import (
     ActionCommand,
     ActionKey,
+    Collection,
     Command,
-    CommandSet,
     DynamicSensor,
     Remote,
     Sensor,
@@ -21,11 +21,15 @@ from homeassistant.const import (
     CONF_DEVICE_CLASS,
     CONF_ENABLED,
     CONF_ICON,
+    CONF_MAXIMUM,
+    CONF_MINIMUM,
+    CONF_MODE,
     CONF_NAME,
     CONF_PAYLOAD_OFF,
     CONF_PAYLOAD_ON,
     CONF_SCAN_INTERVAL,
     CONF_TIMEOUT,
+    CONF_TYPE,
     CONF_UNIT_OF_MEASUREMENT,
     CONF_VALUE_TEMPLATE,
 )
@@ -36,13 +40,11 @@ from .const import (
     CONF_COMMAND_SET,
     CONF_DYNAMIC,
     CONF_KEY,
+    CONF_PATTERN,
     CONF_SENSOR_COMMANDS,
     CONF_SENSORS,
     CONF_SEPARATOR,
     CONF_SUGGESTED_UNIT_OF_MEASUREMENT,
-    CONF_VALUE_MAX,
-    CONF_VALUE_MIN,
-    CONF_VALUE_TYPE,
 )
 from .helpers import get_command_renderer, get_value_renderer
 
@@ -82,6 +84,7 @@ DEFAULT_SENSOR_OPTIONS: dict[str, dict] = {
 
 SENSOR_OPTIONS_KEYS = (
     CONF_SUGGESTED_UNIT_OF_MEASUREMENT,
+    CONF_MODE,
     CONF_DEVICE_CLASS,
     CONF_ICON,
     CONF_ENABLED,
@@ -139,9 +142,10 @@ def _sensor_to_conf(sensor: Sensor) -> dict:
             CONF_SEPARATOR: sensor.separator
             if isinstance(sensor, DynamicSensor)
             else None,
-            CONF_VALUE_TYPE: _value_type_to_string(sensor.value_type),
-            CONF_VALUE_MIN: sensor.value_min,
-            CONF_VALUE_MAX: sensor.value_max,
+            CONF_TYPE: _value_type_to_string(sensor.value_type),
+            CONF_MINIMUM: sensor.value_min,
+            CONF_MAXIMUM: sensor.value_max,
+            CONF_PATTERN: sensor.value_pattern,
             CONF_UNIT_OF_MEASUREMENT: sensor.value_unit,
             CONF_COMMAND_SET: sensor.command_set,
             CONF_COMMAND_ON: sensor.command_on.string if sensor.command_on else None,
@@ -162,10 +166,11 @@ def _conf_to_sensor(hass: HomeAssistant, data: dict) -> Sensor | DynamicSensor:
     sensor = (DynamicSensor if data.get(CONF_DYNAMIC) else Sensor)(
         data.get(CONF_NAME),
         data.get(CONF_KEY),
-        value_type=_string_to_value_type(data.get(CONF_VALUE_TYPE)),
+        value_type=_string_to_value_type(data.get(CONF_TYPE)),
         value_unit=data.get(CONF_UNIT_OF_MEASUREMENT),
-        value_min=data.get(CONF_VALUE_MIN),
-        value_max=data.get(CONF_VALUE_MAX),
+        value_min=data.get(CONF_MINIMUM),
+        value_max=data.get(CONF_MAXIMUM),
+        value_pattern=data.get(CONF_PATTERN),
         value_renderer=get_value_renderer(hass, value_template)
         if (value_template := data.get(CONF_VALUE_TEMPLATE))
         else None,
@@ -220,9 +225,9 @@ def get_sensor_commands_conf(remote: Remote) -> list[dict]:
     return [_sensor_command_to_conf(command) for command in remote.sensor_commands]
 
 
-def get_command_set(hass: HomeAssistant, options: dict) -> CommandSet:
-    """Get command set."""
-    return CommandSet(
+def get_collection(hass: HomeAssistant, options: dict) -> Collection:
+    """Get collection."""
+    return Collection(
         "",
         [
             _conf_to_action_command(hass, command_data)

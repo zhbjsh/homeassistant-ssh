@@ -5,7 +5,7 @@ import asyncio
 from dataclasses import dataclass
 import logging
 
-from ssh_remote_control import Remote
+from ssh_remote_control import Command, Remote
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
@@ -48,7 +48,8 @@ from .const import (
     SERVICE_TURN_ON,
 )
 from .coordinator import SensorCommandCoordinator, StateCoordinator
-from .options_converter import get_command_set
+from .helpers import get_command_renderer
+from .options_converter import get_collection
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -112,7 +113,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ssh_timeout=options[CONF_SSH_TIMEOUT],
         ping_timeout=options[CONF_PING_TIMEOUT],
         command_timeout=options[CONF_COMMAND_TIMEOUT],
-        command_set=get_command_set(hass, options),
+        collection=get_collection(hass, options),
         allow_turn_off=options[CONF_ALLOW_TURN_OFF],
         logger=_LOGGER,
     )
@@ -140,7 +141,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         for entry_id in config_entry_ids:
             entry_data: EntryData = hass.data[DOMAIN][entry_id]
-            tasks.append(entry_data.state_coordinator.async_turn_on())
+            tasks.append(entry_data.remote.async_turn_on())
 
         if tasks:
             await asyncio.wait(tasks)
@@ -151,7 +152,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         for entry_id in config_entry_ids:
             entry_data: EntryData = hass.data[DOMAIN][entry_id]
-            tasks.append(entry_data.state_coordinator.async_turn_off())
+            tasks.append(entry_data.remote.async_turn_off())
 
         if tasks:
             await asyncio.wait(tasks)
@@ -163,12 +164,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         context = call.data.get(CONF_CONTEXT)
         tasks = []
 
+        command = Command(
+            command_string,
+            timeout=timeout,
+            renderer=get_command_renderer(hass),
+        )
+
         for entry_id in config_entry_ids:
             entry_data: EntryData = hass.data[DOMAIN][entry_id]
             tasks.append(
-                entry_data.state_coordinator.async_execute_command(
-                    command_string, timeout, context
-                ),
+                entry_data.remote.async_execute_command(command, timeout, context),
             )
 
         if tasks:
@@ -182,9 +187,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         for entry_id in config_entry_ids:
             entry_data: EntryData = hass.data[DOMAIN][entry_id]
-            tasks.append(
-                entry_data.state_coordinator.async_run_action(action_key, context)
-            )
+            tasks.append(entry_data.remote.async_run_action(action_key, context))
 
         if tasks:
             await asyncio.wait(tasks)
@@ -214,9 +217,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             sensor_keys = [entity.key for entity in entities]
 
             if sensor_keys:
-                tasks.append(
-                    entry_data.state_coordinator.async_poll_sensors(sensor_keys)
-                )
+                tasks.append(entry_data.remote.async_poll_sensors(sensor_keys))
 
         if tasks:
             await asyncio.wait(tasks)

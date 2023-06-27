@@ -37,7 +37,7 @@ class Entity(BaseActionEntity, ButtonEntity):
     _entity_id_format = ENTITY_ID_FORMAT
 
     async def async_press(self) -> None:
-        await self.coordinator.async_run_action(self.key)
+        await self._remote.async_run_action(self.key)
 
 
 class PowerEntity(BaseEntity, ButtonEntity):
@@ -64,7 +64,7 @@ class PowerEntity(BaseEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         if not self._remote.state.is_online:
-            await self.coordinator.async_turn_on()
+            await self._remote.async_turn_on()
 
         elif self._remote.state.is_connected:
-            await self.coordinator.async_turn_off()
+            await self._remote.async_turn_off()

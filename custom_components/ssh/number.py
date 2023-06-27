@@ -3,8 +3,9 @@ from __future__ import annotations
 
 from ssh_remote_control import DynamicSensor
 
-from homeassistant.components.number import ENTITY_ID_FORMAT, NumberEntity
+from homeassistant.components.number import ENTITY_ID_FORMAT, NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_MODE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -59,16 +60,20 @@ class Entity(BaseSensorEntity, NumberEntity):
 
     @property
     def native_max_value(self) -> float:
-        if self._sensor.value_max is None:
-            return 100.0
-        return float(self._sensor.value_max)
+        if self._sensor.value_max is not None:
+            return float(self._sensor.value_max)
+        return 100.0
 
     @property
     def native_min_value(self) -> float:
-        if self._sensor.value_min is None:
-            return 0.0
-        return float(self._sensor.value_min)
+        if self._sensor.value_min is not None:
+            return float(self._sensor.value_min)
+        return 0.0
+
+    @property
+    def mode(self) -> NumberMode:
+        return self._options.get(CONF_MODE, NumberMode.AUTO)
 
     async def async_set_native_value(self, value: float) -> None:
         value = self._sensor.value_type(value)
-        await self.coordinator.async_set_sensor_value(self.key, value)
+        await self._remote.async_set_sensor_value(self.key, value)

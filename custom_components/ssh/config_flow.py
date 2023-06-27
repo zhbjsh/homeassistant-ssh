@@ -10,13 +10,13 @@ from typing import Any
 from ssh_remote_control import (
     DEFAULT_ADD_HOST_KEYS,
     DEFAULT_SSH_PORT,
-    CommandSet,
+    Collection,
     OfflineError,
     Remote,
     SSHAuthError,
     SSHConnectError,
     SSHHostKeyUnknownError,
-    default_command_sets,
+    default_collections,
     name_to_key,
 )
 import voluptuous as vol
@@ -31,11 +31,15 @@ from homeassistant.const import (
     CONF_HOST,
     CONF_ICON,
     CONF_MAC,
+    CONF_MAXIMUM,
+    CONF_MINIMUM,
+    CONF_MODE,
     CONF_NAME,
     CONF_PAYLOAD_OFF,
     CONF_PAYLOAD_ON,
     CONF_SCAN_INTERVAL,
     CONF_TIMEOUT,
+    CONF_TYPE,
     CONF_UNIT_OF_MEASUREMENT,
     CONF_VALUE_TEMPLATE,
 )
@@ -56,9 +60,10 @@ from .const import (
     CONF_ALLOW_TURN_OFF,
     CONF_COMMAND_SET,
     CONF_COMMAND_TIMEOUT,
-    CONF_DEFAULT_COMMAND_SET,
+    CONF_DEFAULT_COMMANDS,
     CONF_DYNAMIC,
     CONF_KEY,
+    CONF_PATTERN,
     CONF_PING_TIMEOUT,
     CONF_SENSOR_COMMANDS,
     CONF_SENSORS,
@@ -71,14 +76,11 @@ from .const import (
     CONF_SSH_USER,
     CONF_SUGGESTED_UNIT_OF_MEASUREMENT,
     CONF_UPDATE_INTERVAL,
-    CONF_VALUE_MAX,
-    CONF_VALUE_MIN,
-    CONF_VALUE_TYPE,
     DOMAIN,
 )
 from .options_converter import (
     get_action_commands_conf,
-    get_command_set,
+    get_collection,
     get_sensor_commands_conf,
 )
 
@@ -104,9 +106,10 @@ SENSOR_SCHEMA = vol.Schema(
         vol.Optional(CONF_KEY): str,
         vol.Optional(CONF_DYNAMIC): bool,
         vol.Optional(CONF_SEPARATOR): str,
-        vol.Optional(CONF_VALUE_TYPE): str,
-        vol.Optional(CONF_VALUE_MIN): float,
-        vol.Optional(CONF_VALUE_MAX): float,
+        vol.Optional(CONF_TYPE): str,
+        vol.Optional(CONF_MINIMUM): vol.Coerce(float),
+        vol.Optional(CONF_MAXIMUM): vol.Coerce(float),
+        vol.Optional(CONF_PATTERN): str,
         vol.Optional(CONF_VALUE_TEMPLATE): str,
         vol.Optional(CONF_UNIT_OF_MEASUREMENT): str,
         vol.Optional(CONF_COMMAND_SET): str,
@@ -115,6 +118,7 @@ SENSOR_SCHEMA = vol.Schema(
         vol.Optional(CONF_PAYLOAD_ON): str,
         vol.Optional(CONF_PAYLOAD_OFF): str,
         vol.Optional(CONF_SUGGESTED_UNIT_OF_MEASUREMENT): str,
+        vol.Optional(CONF_MODE): str,
         vol.Optional(CONF_DEVICE_CLASS): str,
         vol.Optional(CONF_ICON): str,
     }
@@ -129,14 +133,14 @@ SENSOR_COMMAND_SCHEMA = vol.Schema(
     }
 )
 
-DEFAULT_COMMAND_SET_SELECTOR = SelectSelector(
+DEFAULT_COMMANDS_SELECTOR = SelectSelector(
     SelectSelectorConfig(
         mode=SelectSelectorMode.DROPDOWN,
         options=[
             *[
                 SelectOptionDict(value=key, label=value.name)
-                for key, value in default_command_sets.__dict__.items()
-                if isinstance(value, CommandSet)
+                for key, value in default_collections.__dict__.items()
+                if isinstance(value, Collection)
             ],
             SelectOptionDict(value="none", label="None"),
         ],
@@ -144,8 +148,25 @@ DEFAULT_COMMAND_SET_SELECTOR = SelectSelector(
 )
 
 
+class ListSelector(ObjectSelector):
+    """Selector for a list."""
+
+    def __init__(
+        self, schema: vol.Schema, config: Mapping[str, Any] | None = None
+    ) -> None:
+        super().__init__(config)
+        self._schema = schema
+
+    def __call__(self, data: Any) -> Any:
+        for element in data:
+            self._schema(element)
+        return data
+
+
 async def validate_name(hass: HomeAssistant, name: str):
     """Validate the name doesn't exist yet."""
+    name = name.strip()
+
     for entry in hass.config_entries.async_entries(DOMAIN):
         existing_name = entry.data[CONF_NAME]
         if name_to_key(existing_name) == name_to_key(name):
@@ -156,7 +177,9 @@ async def validate_name(hass: HomeAssistant, name: str):
 
 def validate_mac_address(mac_address: str):
     """Validate the mac address has the correct format."""
-    pattern = re.compile(
+    mac_address = mac_address.strip()
+
+    pattern = (
         "^([0-9A-Fa-f]{2}[:-])"
         + "{5}([0-9A-Fa-f]{2})|"
         + "([0-9a-fA-F]{4}\\."
@@ -164,7 +187,7 @@ def validate_mac_address(mac_address: str):
         + "[0-9a-fA-F]{4})$"
     )
 
-    if re.search(pattern, mac_address) is None:
+    if not re.fullmatch(pattern, mac_address):
         raise MACAddressInvalidError
 
     return mac_address
@@ -172,25 +195,12 @@ def validate_mac_address(mac_address: str):
 
 def validate_options(hass: HomeAssistant, options: dict[str, Any]) -> dict[str, Any]:
     """Validate the options user input."""
-    for command_data in options[CONF_ACTION_COMMANDS]:
-        try:
-            ACTION_COMMAND_SCHEMA(command_data)
-        except vol.Error as exc:
-            raise ActionCommandsInvalidError from exc
-
-    for command_data in options[CONF_SENSOR_COMMANDS]:
-        try:
-            SENSOR_COMMAND_SCHEMA(command_data)
-        except vol.Error as exc:
-            raise SensorCommandsInvalidError from exc
-
-    get_command_set(hass, options)
-
+    get_collection(hass, options)
     return options
 
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
-    """Validate the user input allows us to connect."""
+    """Validate the config user input."""
     remote = Remote(
         data[CONF_HOST],
         add_host_keys=data[CONF_ADD_HOST_KEYS],
@@ -199,13 +209,13 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         ssh_password=data.get(CONF_SSH_PASSWORD),
         ssh_key_file=data.get(CONF_SSH_KEY_FILE),
         ssh_host_keys_file=data.get(CONF_SSH_HOST_KEYS_FILE),
-        command_set=getattr(default_command_sets, key)
-        if (key := data[CONF_DEFAULT_COMMAND_SET]) != "none"
+        collection=getattr(default_collections, key)
+        if (key := data[CONF_DEFAULT_COMMANDS]) != "none"
         else None,
         logger=_LOGGER,
     )
 
-    await remote.async_update_state(validate=True)
+    await remote.async_update_state(raise_errors=True)
     await remote.async_disconnect()
 
     if mac_address := remote.mac_address:
@@ -251,12 +261,8 @@ class OptionsFlow(config_entries.OptionsFlow):
             self._data = user_input
             try:
                 options = validate_options(self.hass, user_input)
-            except ActionCommandsInvalidError:
-                errors["base"] = "action_commands_invalid_error"
-            except SensorCommandsInvalidError:
-                errors["base"] = "sensor_commands_invalid_error"
             except ValueError:
-                errors["base"] = "sensor_name_key_error"
+                errors["base"] = "name_key_error"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -291,11 +297,11 @@ class OptionsFlow(config_entries.OptionsFlow):
                     vol.Required(
                         CONF_ACTION_COMMANDS,
                         default=self._data[CONF_ACTION_COMMANDS],
-                    ): ObjectSelector(),
+                    ): ListSelector(ACTION_COMMAND_SCHEMA),
                     vol.Required(
                         CONF_SENSOR_COMMANDS,
                         default=self._data[CONF_SENSOR_COMMANDS],
-                    ): ObjectSelector(),
+                    ): ListSelector(SENSOR_COMMAND_SCHEMA),
                 }
             ),
         )
@@ -373,9 +379,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         default=self._data.get(CONF_HOST, vol.UNDEFINED),
                     ): str,
                     vol.Required(
-                        CONF_DEFAULT_COMMAND_SET,
-                        default=self._data.get(CONF_DEFAULT_COMMAND_SET, vol.UNDEFINED),
-                    ): DEFAULT_COMMAND_SET_SELECTOR,
+                        CONF_DEFAULT_COMMANDS,
+                        default=self._data.get(CONF_DEFAULT_COMMANDS, vol.UNDEFINED),
+                    ): DEFAULT_COMMANDS_SELECTOR,
                     vol.Required(
                         CONF_SSH_PORT,
                         default=self._data.get(CONF_SSH_PORT, DEFAULT_SSH_PORT),
@@ -492,11 +498,3 @@ class NameExistsError(Exception):
 
 class MACAddressInvalidError(Exception):
     """Error to indicate MAC address is invalid."""
-
-
-class ActionCommandsInvalidError(Exception):
-    """Error to indicate action commands are invalid."""
-
-
-class SensorCommandsInvalidError(Exception):
-    """Error to indicate sensor commands are invalid."""
