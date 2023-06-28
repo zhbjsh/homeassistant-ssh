@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from ssh_remote_control import DynamicSensor, Sensor
+from ssh_remote_control import Sensor
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -44,7 +44,7 @@ def get_child_added_listener(
 ) -> Callable:
     """Get child added listener."""
 
-    def listener(parent: DynamicSensor, child: Sensor):
+    def listener(parent: Sensor, child: Sensor):
         entity = next(
             (
                 entity
@@ -77,7 +77,7 @@ def get_child_removed_listener(
 ) -> Callable:
     """Get child removed listener."""
 
-    def listener(parent: DynamicSensor, child: Sensor):
+    def listener(parent: Sensor, child: Sensor):
         entity = next(
             (
                 entity

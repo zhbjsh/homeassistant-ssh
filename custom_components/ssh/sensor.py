@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 
-from ssh_remote_control import DynamicSensor
+from ssh_remote_control import BinarySensor, NumberSensor, TextSensor
 
 from homeassistant.components.sensor import (
     ENTITY_ID_FORMAT,
@@ -19,7 +19,11 @@ from homeassistant.helpers.typing import StateType
 
 from . import EntryData
 from .base_entity import BaseSensorEntity
-from .const import CONF_SUGGESTED_UNIT_OF_MEASUREMENT, DOMAIN
+from .const import (
+    CONF_SUGGESTED_DISPLAY_PRECISION,
+    CONF_SUGGESTED_UNIT_OF_MEASUREMENT,
+    DOMAIN,
+)
 from .helpers import get_child_added_listener, get_child_removed_listener
 
 
@@ -43,9 +47,9 @@ async def async_setup_entry(
     entities = []
 
     for sensor in entry_data.remote.sensors_by_key.values():
-        if sensor.value_type is bool or sensor.is_controllable:
+        if isinstance(sensor, BinarySensor) or sensor.is_controllable:
             continue
-        if isinstance(sensor, DynamicSensor):
+        if sensor.is_dynamic:
             sensor.on_child_added.subscribe(child_added_listener)
             sensor.on_child_removed.subscribe(child_removed_listener)
             continue
@@ -56,20 +60,25 @@ async def async_setup_entry(
 
 class Entity(BaseSensorEntity, SensorEntity):
     _entity_id_format = ENTITY_ID_FORMAT
+    _sensor: TextSensor | NumberSensor
 
     @property
     def state_class(self) -> SensorStateClass | None:
-        if self._sensor.value_type in [int, float]:
+        if isinstance(self._sensor, NumberSensor):
             return SensorStateClass.MEASUREMENT
         return None
 
     @property
     def native_unit_of_measurement(self) -> str | None:
-        return self._sensor.value_unit
+        return self._sensor.unit
 
     @property
     def native_value(self) -> StateType | date | datetime | Decimal:
         return self._sensor.value
+
+    @property
+    def suggested_display_precision(self) -> int | None:
+        return self._options.get(CONF_SUGGESTED_DISPLAY_PRECISION)
 
     @property
     def suggested_unit_of_measurement(self) -> str | None:

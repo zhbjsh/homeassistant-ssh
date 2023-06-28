@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ssh_remote_control import DynamicSensor
+from ssh_remote_control import BinarySensor, Sensor
 
 from homeassistant.components.switch import ENTITY_ID_FORMAT, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
@@ -37,9 +37,9 @@ async def async_setup_entry(
     entities = []
 
     for sensor in entry_data.remote.sensors_by_key.values():
-        if not (sensor.value_type is bool and sensor.is_controllable):
+        if not (isinstance(sensor, BinarySensor) and sensor.is_controllable):
             continue
-        if isinstance(sensor, DynamicSensor):
+        if sensor.is_dynamic:
             sensor.on_child_added.subscribe(child_added_listener)
             sensor.on_child_removed.subscribe(child_removed_listener)
             continue
@@ -50,6 +50,7 @@ async def async_setup_entry(
 
 class Entity(BaseSensorEntity, SwitchEntity):
     _entity_id_format = ENTITY_ID_FORMAT
+    _sensor: BinarySensor
 
     @property
     def is_on(self) -> bool | None:

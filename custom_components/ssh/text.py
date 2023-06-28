@@ -1,7 +1,7 @@
 """Platform for text integration."""
 from __future__ import annotations
 
-from ssh_remote_control import DynamicSensor
+from ssh_remote_control import TextSensor
 
 from homeassistant.components.text import ENTITY_ID_FORMAT, TextEntity, TextMode
 from homeassistant.config_entries import ConfigEntry
@@ -36,9 +36,9 @@ async def async_setup_entry(
     entities = []
 
     for sensor in entry_data.remote.sensors_by_key.values():
-        if not (sensor.value_type is str and sensor.is_controllable):
+        if not (isinstance(sensor, TextSensor) and sensor.is_controllable):
             continue
-        if isinstance(sensor, DynamicSensor):
+        if sensor.is_dynamic:
             sensor.on_child_added.subscribe(child_added_listener)
             sensor.on_child_removed.subscribe(child_removed_listener)
             continue
@@ -49,6 +49,7 @@ async def async_setup_entry(
 
 class Entity(BaseSensorEntity, TextEntity):
     _entity_id_format = ENTITY_ID_FORMAT
+    _sensor: TextSensor
 
     @property
     def native_value(self) -> str | None:
@@ -56,19 +57,19 @@ class Entity(BaseSensorEntity, TextEntity):
 
     @property
     def native_max(self) -> int:
-        if self._sensor.value_max is not None:
-            return int(self._sensor.value_max)
+        if self._sensor.maximum is not None:
+            return int(self._sensor.maximum)
         return 100
 
     @property
     def native_min(self) -> int:
-        if self._sensor.value_min is not None:
-            return int(self._sensor.value_min)
+        if self._sensor.minimum is not None:
+            return int(self._sensor.minimum)
         return 0
 
     @property
     def pattern(self) -> str | None:
-        return self._sensor.value_pattern
+        return self._sensor.pattern
 
     @property
     def mode(self) -> TextMode:

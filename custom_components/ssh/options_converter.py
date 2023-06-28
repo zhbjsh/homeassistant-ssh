@@ -3,13 +3,15 @@ from __future__ import annotations
 from ssh_remote_control import (
     ActionCommand,
     ActionKey,
+    BinarySensor,
     Collection,
     Command,
-    DynamicSensor,
+    NumberSensor,
     Remote,
     Sensor,
     SensorCommand,
     SensorKey,
+    TextSensor,
 )
 
 from homeassistant.components.button import ButtonDeviceClass
@@ -44,6 +46,7 @@ from .const import (
     CONF_SENSOR_COMMANDS,
     CONF_SENSORS,
     CONF_SEPARATOR,
+    CONF_SUGGESTED_DISPLAY_PRECISION,
     CONF_SUGGESTED_UNIT_OF_MEASUREMENT,
 )
 from .helpers import get_command_renderer, get_value_renderer
@@ -83,6 +86,7 @@ DEFAULT_SENSOR_OPTIONS: dict[str, dict] = {
 }
 
 SENSOR_OPTIONS_KEYS = (
+    CONF_SUGGESTED_DISPLAY_PRECISION,
     CONF_SUGGESTED_UNIT_OF_MEASUREMENT,
     CONF_MODE,
     CONF_DEVICE_CLASS,
@@ -97,23 +101,15 @@ def _remove_none_items(data: dict) -> dict:
     return {key: value for key, value in data.items() if value is not None}
 
 
-def _value_type_to_string(value_type: type) -> str:
-    return {int: "int", float: "float", bool: "bool"}.get(value_type)
-
-
-def _string_to_value_type(string: str) -> type:
-    return {"int": int, "float": float, "bool": bool}.get(string)
-
-
 def _action_command_to_conf(command: ActionCommand) -> dict:
-    return _remove_none_items(
-        {
-            CONF_COMMAND: command.string,
-            CONF_NAME: command.name,
-            CONF_KEY: command.key,
-            CONF_TIMEOUT: command.timeout,
-        }
-    )
+    data = {
+        CONF_COMMAND: command.string,
+        CONF_NAME: command.name,
+        CONF_KEY: command.key,
+        CONF_TIMEOUT: command.timeout,
+    }
+
+    return _remove_none_items(data)
 
 
 def _conf_to_action_command(hass: HomeAssistant, data: dict) -> ActionCommand:
@@ -134,75 +130,97 @@ def _conf_to_action_command(hass: HomeAssistant, data: dict) -> ActionCommand:
 
 
 def _sensor_to_conf(sensor: Sensor) -> dict:
-    return _remove_none_items(
-        {
-            CONF_NAME: sensor.name,
-            CONF_KEY: sensor.key,
-            CONF_DYNAMIC: isinstance(sensor, DynamicSensor) or None,
-            CONF_SEPARATOR: sensor.separator
-            if isinstance(sensor, DynamicSensor)
-            else None,
-            CONF_TYPE: _value_type_to_string(sensor.value_type),
-            CONF_MINIMUM: sensor.value_min,
-            CONF_MAXIMUM: sensor.value_max,
-            CONF_PATTERN: sensor.value_pattern,
-            CONF_UNIT_OF_MEASUREMENT: sensor.value_unit,
-            CONF_COMMAND_SET: sensor.command_set,
-            CONF_COMMAND_ON: sensor.command_on.string if sensor.command_on else None,
-            CONF_COMMAND_OFF: sensor.command_off.string if sensor.command_off else None,
-            CONF_PAYLOAD_ON: sensor.payload_on,
-            CONF_PAYLOAD_OFF: sensor.payload_off,
-        }
-    )
+    data = {
+        CONF_NAME: sensor.name,
+        CONF_KEY: sensor.key,
+        CONF_TYPE: (
+            "number"
+            if isinstance(sensor, NumberSensor)
+            else "binary"
+            if isinstance(sensor, BinarySensor)
+            else None
+        ),
+        CONF_DYNAMIC: getattr(sensor, "dynamic", None),
+        CONF_SEPARATOR: getattr(sensor, "separator", None),
+        CONF_UNIT_OF_MEASUREMENT: getattr(sensor, "unit", None),
+        CONF_MINIMUM: getattr(sensor, "minimum", None),
+        CONF_MAXIMUM: getattr(sensor, "maximum", None),
+        CONF_PATTERN: getattr(sensor, "pattern", None),
+        CONF_PAYLOAD_ON: getattr(sensor, "payload_on", None),
+        CONF_PAYLOAD_OFF: getattr(sensor, "payload_off", None),
+        CONF_COMMAND_SET: (
+            sensor.command_set.string if getattr(sensor, "command_set", None) else None
+        ),
+        CONF_COMMAND_ON: (
+            sensor.command_on.string if getattr(sensor, "command_on", None) else None
+        ),
+        CONF_COMMAND_OFF: (
+            sensor.command_off.string if getattr(sensor, "command_off", None) else None
+        ),
+    }
+
+    return _remove_none_items(data)
 
 
-def _conf_to_sensor(hass: HomeAssistant, data: dict) -> Sensor | DynamicSensor:
+def _conf_to_sensor(hass: HomeAssistant, data: dict) -> Sensor:
     options = DEFAULT_SENSOR_OPTIONS.get(data.get(CONF_KEY), {})
 
     for key in SENSOR_OPTIONS_KEYS:
         if key in data:
             options[key] = data[key]
 
-    sensor = (DynamicSensor if data.get(CONF_DYNAMIC) else Sensor)(
-        data.get(CONF_NAME),
-        data.get(CONF_KEY),
-        value_type=_string_to_value_type(data.get(CONF_TYPE)),
-        value_unit=data.get(CONF_UNIT_OF_MEASUREMENT),
-        value_min=data.get(CONF_MINIMUM),
-        value_max=data.get(CONF_MAXIMUM),
-        value_pattern=data.get(CONF_PATTERN),
-        value_renderer=get_value_renderer(hass, value_template)
-        if (value_template := data.get(CONF_VALUE_TEMPLATE))
-        else None,
-        command_set=Command(data[CONF_COMMAND_SET], renderer=get_command_renderer(hass))
-        if data.get(CONF_COMMAND_SET)
-        else None,
-        command_on=Command(data[CONF_COMMAND_ON], renderer=get_command_renderer(hass))
-        if data.get(CONF_COMMAND_ON)
-        else None,
-        command_off=Command(data[CONF_COMMAND_OFF], renderer=get_command_renderer(hass))
-        if data.get(CONF_COMMAND_OFF)
-        else None,
-        payload_on=data.get(CONF_PAYLOAD_ON),
-        payload_off=data.get(CONF_PAYLOAD_OFF),
-        options=options,
-    )
+    kwargs = {
+        "name": data.get(CONF_NAME),
+        "key": data.get(CONF_KEY),
+        "dynamic": data.get(CONF_DYNAMIC),
+        "separator": data.get(CONF_SEPARATOR),
+        "unit": data.get(CONF_UNIT_OF_MEASUREMENT),
+        "minimum": data.get(CONF_MINIMUM),
+        "maximum": data.get(CONF_MAXIMUM),
+        "pattern": data.get(CONF_PATTERN),
+        "payload_on": data.get(CONF_PAYLOAD_ON),
+        "payload_off": data.get(CONF_PAYLOAD_OFF),
+        "renderer": (
+            get_value_renderer(hass, data[CONF_VALUE_TEMPLATE])
+            if data.get(CONF_VALUE_TEMPLATE)
+            else None
+        ),
+        "command_set": (
+            Command(data[CONF_COMMAND_SET], renderer=get_command_renderer(hass))
+            if data.get(CONF_COMMAND_SET)
+            else None
+        ),
+        "command_on": (
+            Command(data[CONF_COMMAND_ON], renderer=get_command_renderer(hass))
+            if data.get(CONF_COMMAND_ON)
+            else None
+        ),
+        "command_off": (
+            Command(data[CONF_COMMAND_OFF], renderer=get_command_renderer(hass))
+            if data.get(CONF_COMMAND_OFF)
+            else None
+        ),
+        "options": options,
+    }
 
-    if isinstance(sensor, DynamicSensor):
-        sensor.separator = data.get(CONF_SEPARATOR)
-
-    return sensor
+    return (
+        NumberSensor
+        if data.get(CONF_TYPE) == "number"
+        else BinarySensor
+        if data.get(CONF_TYPE) == "binary"
+        else TextSensor
+    )(**_remove_none_items(kwargs))
 
 
 def _sensor_command_to_conf(command: SensorCommand) -> dict:
-    return _remove_none_items(
-        {
-            CONF_COMMAND: command.string,
-            CONF_TIMEOUT: command.timeout,
-            CONF_SCAN_INTERVAL: command.interval,
-            CONF_SENSORS: [_sensor_to_conf(sensor) for sensor in command.sensors],
-        }
-    )
+    data = {
+        CONF_COMMAND: command.string,
+        CONF_TIMEOUT: command.timeout,
+        CONF_SCAN_INTERVAL: command.interval,
+        CONF_SENSORS: [_sensor_to_conf(sensor) for sensor in command.sensors],
+    }
+
+    return _remove_none_items(data)
 
 
 def _conf_to_sensor_command(hass: HomeAssistant, data: dict) -> SensorCommand:

@@ -1,7 +1,7 @@
 """Platform for binary sensor integration."""
 from __future__ import annotations
 
-from ssh_remote_control import DynamicSensor
+from ssh_remote_control import BinarySensor
 
 from homeassistant.components.binary_sensor import (
     ENTITY_ID_FORMAT,
@@ -42,9 +42,9 @@ async def async_setup_entry(
     ]
 
     for sensor in entry_data.remote.sensors_by_key.values():
-        if sensor.value_type is not bool or sensor.is_controllable:
+        if not isinstance(sensor, BinarySensor) or sensor.is_controllable:
             continue
-        if isinstance(sensor, DynamicSensor):
+        if sensor.is_dynamic:
             sensor.on_child_added.subscribe(child_added_listener)
             sensor.on_child_removed.subscribe(child_removed_listener)
             continue
@@ -55,6 +55,7 @@ async def async_setup_entry(
 
 class Entity(BaseSensorEntity, BinarySensorEntity):
     _entity_id_format = ENTITY_ID_FORMAT
+    _sensor: BinarySensor
 
     @property
     def is_on(self) -> bool | None:

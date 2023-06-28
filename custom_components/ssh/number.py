@@ -1,7 +1,7 @@
 """Platform for number integration."""
 from __future__ import annotations
 
-from ssh_remote_control import DynamicSensor
+from ssh_remote_control import NumberSensor
 
 from homeassistant.components.number import ENTITY_ID_FORMAT, NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
@@ -36,9 +36,9 @@ async def async_setup_entry(
     entities = []
 
     for sensor in entry_data.remote.sensors_by_key.values():
-        if not (sensor.value_type in [int, float] and sensor.is_controllable):
+        if not (isinstance(sensor, NumberSensor) and sensor.is_controllable):
             continue
-        if isinstance(sensor, DynamicSensor):
+        if sensor.is_dynamic:
             sensor.on_child_added.subscribe(child_added_listener)
             sensor.on_child_removed.subscribe(child_removed_listener)
             continue
@@ -49,10 +49,11 @@ async def async_setup_entry(
 
 class Entity(BaseSensorEntity, NumberEntity):
     _entity_id_format = ENTITY_ID_FORMAT
+    _sensor: NumberSensor
 
     @property
     def native_unit_of_measurement(self) -> str | None:
-        return self._sensor.value_unit
+        return self._sensor.unit
 
     @property
     def native_value(self) -> int | float | None:
@@ -60,14 +61,14 @@ class Entity(BaseSensorEntity, NumberEntity):
 
     @property
     def native_max_value(self) -> float:
-        if self._sensor.value_max is not None:
-            return float(self._sensor.value_max)
+        if self._sensor.maximum is not None:
+            return float(self._sensor.maximum)
         return 100.0
 
     @property
     def native_min_value(self) -> float:
-        if self._sensor.value_min is not None:
-            return float(self._sensor.value_min)
+        if self._sensor.minimum is not None:
+            return float(self._sensor.minimum)
         return 0.0
 
     @property
@@ -75,5 +76,4 @@ class Entity(BaseSensorEntity, NumberEntity):
         return self._options.get(CONF_MODE, NumberMode.AUTO)
 
     async def async_set_native_value(self, value: float) -> None:
-        value = self._sensor.value_type(value)
         await self._remote.async_set_sensor_value(self.key, value)
