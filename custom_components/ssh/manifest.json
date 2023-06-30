@@ -1,7 +1,7 @@
 {
   "domain": "ssh",
   "name": "SSH",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "codeowners": [
     "@zhbjsh"
   ],
@@ -12,7 +12,7 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/zhbjsh/homeassistant-ssh/issues",
   "requirements": [
-    "ssh-remote-control == 0.2.0"
+    "ssh-remote-control == 0.2.1"
   ],
   "ssdp": [],
   "zeroconf": []

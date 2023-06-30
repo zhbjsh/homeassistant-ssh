@@ -1,7 +1,6 @@
 """Config flow for SSH integration."""
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Mapping
 import logging
 import re
@@ -17,7 +16,6 @@ from ssh_remote_control import (
     SSHConnectError,
     SSHHostKeyUnknownError,
     default_collections,
-    name_to_key,
 )
 import voluptuous as vol
 
@@ -28,6 +26,7 @@ from homeassistant.const import (
     CONF_COMMAND_OFF,
     CONF_COMMAND_ON,
     CONF_DEVICE_CLASS,
+    CONF_ENABLED,
     CONF_HOST,
     CONF_ICON,
     CONF_MAC,
@@ -53,6 +52,7 @@ from homeassistant.helpers.selector import (
     SelectSelectorConfig,
     SelectSelectorMode,
 )
+from homeassistant.util import slugify
 
 from .const import (
     CONF_ACTION_COMMANDS,
@@ -62,7 +62,9 @@ from .const import (
     CONF_COMMAND_TIMEOUT,
     CONF_DEFAULT_COMMANDS,
     CONF_DYNAMIC,
+    CONF_INTEGER,
     CONF_KEY,
+    CONF_OPTIONS,
     CONF_PATTERN,
     CONF_PING_TIMEOUT,
     CONF_SENSOR_COMMANDS,
@@ -79,10 +81,10 @@ from .const import (
     CONF_UPDATE_INTERVAL,
     DOMAIN,
 )
-from .options_converter import (
-    get_action_commands_conf,
+from .converter import (
+    get_action_command_config,
     get_collection,
-    get_sensor_commands_conf,
+    get_sensor_command_config,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -90,48 +92,82 @@ _LOGGER = logging.getLogger(__name__)
 DEFAULT_UPDATE_INTERVAL = 30
 DEFAULT_HOST_KEYS_FILENAME = ".ssh_known_hosts"
 
-ACTION_COMMAND_SCHEMA = vol.Schema(
+SENSOR_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_COMMAND): str,
+        vol.Optional(CONF_TYPE): str,
         vol.Optional(CONF_NAME): str,
         vol.Optional(CONF_KEY): str,
-        vol.Optional(CONF_TIMEOUT): int,
+        vol.Optional(CONF_DYNAMIC): bool,
+        vol.Optional(CONF_SEPARATOR): str,
+        vol.Optional(CONF_UNIT_OF_MEASUREMENT): str,
+        vol.Optional(CONF_VALUE_TEMPLATE): str,
+        vol.Optional(CONF_COMMAND_SET): str,
+        vol.Optional(CONF_SUGGESTED_UNIT_OF_MEASUREMENT): str,
+        vol.Optional(CONF_SUGGESTED_DISPLAY_PRECISION): int,
+        vol.Optional(CONF_MODE): str,
         vol.Optional(CONF_DEVICE_CLASS): str,
         vol.Optional(CONF_ICON): str,
+        vol.Optional(CONF_ENABLED): bool,
     }
 )
 
-SENSOR_SCHEMA = vol.Schema(
+TEXT_SENSOR_SCHEMA = SENSOR_SCHEMA.extend(
     {
-        vol.Optional(CONF_NAME): str,
-        vol.Optional(CONF_KEY): str,
-        vol.Optional(CONF_TYPE): str,
-        vol.Optional(CONF_DYNAMIC): bool,
-        vol.Optional(CONF_SEPARATOR): str,
+        vol.Optional(CONF_MINIMUM): int,
+        vol.Optional(CONF_MAXIMUM): int,
+        vol.Optional(CONF_PATTERN): str,
+        vol.Optional(CONF_OPTIONS): list,
+    }
+)
+
+NUMBER_SENSOR_SCHEMA = SENSOR_SCHEMA.extend(
+    {
+        vol.Required(CONF_TYPE): "number",
+        vol.Optional(CONF_INTEGER): bool,
         vol.Optional(CONF_MINIMUM): vol.Coerce(float),
         vol.Optional(CONF_MAXIMUM): vol.Coerce(float),
-        vol.Optional(CONF_PATTERN): str,
-        vol.Optional(CONF_VALUE_TEMPLATE): str,
-        vol.Optional(CONF_UNIT_OF_MEASUREMENT): str,
-        vol.Optional(CONF_COMMAND_SET): str,
+    }
+)
+
+BINARY_SENSOR_SCHEMA = SENSOR_SCHEMA.extend(
+    {
+        vol.Required(CONF_TYPE): "binary",
         vol.Optional(CONF_COMMAND_ON): str,
         vol.Optional(CONF_COMMAND_OFF): str,
         vol.Optional(CONF_PAYLOAD_ON): str,
         vol.Optional(CONF_PAYLOAD_OFF): str,
-        vol.Optional(CONF_SUGGESTED_DISPLAY_PRECISION): int,
-        vol.Optional(CONF_SUGGESTED_UNIT_OF_MEASUREMENT): str,
-        vol.Optional(CONF_MODE): str,
-        vol.Optional(CONF_DEVICE_CLASS): str,
-        vol.Optional(CONF_ICON): str,
     }
 )
 
-SENSOR_COMMAND_SCHEMA = vol.Schema(
+COMMAND_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_COMMAND): str,
         vol.Optional(CONF_TIMEOUT): int,
+    }
+)
+
+ACTION_COMMAND_SCHEMA = COMMAND_SCHEMA.extend(
+    {
+        vol.Optional(CONF_NAME): str,
+        vol.Optional(CONF_KEY): str,
+        vol.Optional(CONF_DEVICE_CLASS): str,
+        vol.Optional(CONF_ICON): str,
+        vol.Optional(CONF_ENABLED): bool,
+    }
+)
+
+SENSOR_COMMAND_SCHEMA = COMMAND_SCHEMA.extend(
+    {
         vol.Optional(CONF_SCAN_INTERVAL): int,
-        vol.Required(CONF_SENSORS): vol.Schema([SENSOR_SCHEMA]),
+        vol.Required(CONF_SENSORS): vol.Schema(
+            [
+                vol.Any(
+                    TEXT_SENSOR_SCHEMA,
+                    NUMBER_SENSOR_SCHEMA,
+                    BINARY_SENSOR_SCHEMA,
+                )
+            ]
+        ),
     }
 )
 
@@ -150,28 +186,12 @@ DEFAULT_COMMANDS_SELECTOR = SelectSelector(
 )
 
 
-class ListSelector(ObjectSelector):
-    """Selector for a list."""
-
-    def __init__(
-        self, schema: vol.Schema, config: Mapping[str, Any] | None = None
-    ) -> None:
-        super().__init__(config)
-        self._schema = schema
-
-    def __call__(self, data: Any) -> Any:
-        for element in data:
-            self._schema(element)
-        return data
-
-
 async def validate_name(hass: HomeAssistant, name: str):
     """Validate the name doesn't exist yet."""
     name = name.strip()
 
     for entry in hass.config_entries.async_entries(DOMAIN):
-        existing_name = entry.data[CONF_NAME]
-        if name_to_key(existing_name) == name_to_key(name):
+        if slugify(entry.data[CONF_NAME]) == slugify(name):
             raise NameExistsError
 
     return name
@@ -211,9 +231,11 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         ssh_password=data.get(CONF_SSH_PASSWORD),
         ssh_key_file=data.get(CONF_SSH_KEY_FILE),
         ssh_host_keys_file=data.get(CONF_SSH_HOST_KEYS_FILE),
-        collection=getattr(default_collections, key)
-        if (key := data[CONF_DEFAULT_COMMANDS]) != "none"
-        else None,
+        collection=(
+            getattr(default_collections, key)
+            if (key := data[CONF_DEFAULT_COMMANDS]) != "none"
+            else None
+        ),
         logger=_LOGGER,
     )
 
@@ -240,11 +262,28 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         CONF_PING_TIMEOUT: remote.ping_timeout,
         CONF_SSH_TIMEOUT: remote.ssh_timeout,
         CONF_COMMAND_TIMEOUT: remote.command_timeout,
-        CONF_ACTION_COMMANDS: get_action_commands_conf(remote),
-        CONF_SENSOR_COMMANDS: get_sensor_commands_conf(remote),
+        CONF_ACTION_COMMANDS: [
+            get_action_command_config(command) for command in remote.action_commands
+        ],
+        CONF_SENSOR_COMMANDS: [
+            get_sensor_command_config(command) for command in remote.sensor_commands
+        ],
     }
 
     return data, options
+
+
+class ListSelector(ObjectSelector):
+    """Selector for a list."""
+
+    def __init__(
+        self, schema: vol.Schema, config: Mapping[str, Any] | None = None
+    ) -> None:
+        super().__init__(config)
+        self._schema = schema
+
+    def __call__(self, data: Any) -> Any:
+        return [self._schema(element) for element in data]
 
 
 class OptionsFlow(config_entries.OptionsFlow):
@@ -346,8 +385,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "ssh_auth_error"
             except SSHConnectError:
                 errors["base"] = "ssh_connect_error"
-            except asyncio.TimeoutError:
-                errors["base"] = "timeout_error"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"

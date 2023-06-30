@@ -25,6 +25,8 @@ CONF_ALLOW_TURN_OFF = "allow_turn_off"
 CONF_CONTEXT = "context"
 CONF_COMMAND_SET = "command_set"
 CONF_PATTERN = "pattern"
+CONF_INTEGER = "integer"
+CONF_OPTIONS = "options"
 
 SERVICE_TURN_ON = "turn_on"
 SERVICE_TURN_OFF = "turn_off"

@@ -1,11 +1,10 @@
 """The SSH integration."""
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass
 import logging
 
-from ssh_remote_control import Command, Remote
+from ssh_remote_control import Command, CommandError, Remote
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
@@ -47,9 +46,9 @@ from .const import (
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
+from .converter import get_collection
 from .coordinator import SensorCommandCoordinator, StateCoordinator
 from .helpers import get_command_renderer
-from .options_converter import get_collection
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,6 +57,7 @@ PLATFORMS: list[Platform] = [
     Platform.BUTTON,
     Platform.NUMBER,
     Platform.SENSOR,
+    Platform.SELECT,
     Platform.SWITCH,
     Platform.TEXT,
 ]
@@ -136,91 +136,67 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def turn_on(call: ServiceCall):
-        config_entry_ids = await async_extract_config_entry_ids(hass, call)
-        tasks = []
-
-        for entry_id in config_entry_ids:
+        for entry_id in await async_extract_config_entry_ids(hass, call):
             entry_data: EntryData = hass.data[DOMAIN][entry_id]
-            tasks.append(entry_data.remote.async_turn_on())
-
-        if tasks:
-            await asyncio.wait(tasks)
+            await entry_data.remote.async_turn_on()
 
     async def turn_off(call: ServiceCall):
-        config_entry_ids = await async_extract_config_entry_ids(hass, call)
-        tasks = []
-
-        for entry_id in config_entry_ids:
+        for entry_id in await async_extract_config_entry_ids(hass, call):
             entry_data: EntryData = hass.data[DOMAIN][entry_id]
-            tasks.append(entry_data.remote.async_turn_off())
-
-        if tasks:
-            await asyncio.wait(tasks)
+            try:
+                await entry_data.remote.async_turn_off()
+            except CommandError:
+                pass
 
     async def execute_command(call: ServiceCall):
-        config_entry_ids = await async_extract_config_entry_ids(hass, call)
         command_string = call.data[CONF_COMMAND]
         timeout = call.data.get(CONF_TIMEOUT)
         context = call.data.get(CONF_CONTEXT)
-        tasks = []
-
         command = Command(
             command_string,
             timeout=timeout,
             renderer=get_command_renderer(hass),
         )
 
-        for entry_id in config_entry_ids:
+        for entry_id in await async_extract_config_entry_ids(hass, call):
             entry_data: EntryData = hass.data[DOMAIN][entry_id]
-            tasks.append(
-                entry_data.remote.async_execute_command(command, timeout, context),
-            )
-
-        if tasks:
-            await asyncio.wait(tasks)
+            try:
+                await entry_data.remote.async_execute_command(command, context)
+            except CommandError:
+                pass
 
     async def run_action(call: ServiceCall):
-        config_entry_ids = await async_extract_config_entry_ids(hass, call)
         action_key = call.data[CONF_KEY]
         context = call.data.get(CONF_CONTEXT)
-        tasks = []
 
-        for entry_id in config_entry_ids:
+        for entry_id in await async_extract_config_entry_ids(hass, call):
             entry_data: EntryData = hass.data[DOMAIN][entry_id]
-            tasks.append(entry_data.remote.async_run_action(action_key, context))
-
-        if tasks:
-            await asyncio.wait(tasks)
+            try:
+                await entry_data.remote.async_run_action(action_key, context)
+            except CommandError:
+                pass
 
     async def poll_sensor(call: ServiceCall):
-        sensor_entities: list[BaseSensorEntity] = []
+        sensor_entities = [
+            entity
+            for platform in entity_platform.async_get_platforms(hass, DOMAIN)
+            for entity in platform.entities.values()
+            if isinstance(entity, BaseSensorEntity)
+        ]
 
-        for platform in entity_platform.async_get_platforms(hass, DOMAIN):
-            for entity in platform.entities.values():
-                if isinstance(entity, BaseSensorEntity):
-                    sensor_entities.append(entity)
-
-        entities = await async_extract_entities(hass, sensor_entities, call)
-        config_entry_ids = await async_extract_config_entry_ids(hass, call)
         entities_by_entry_id: dict[str, list[BaseSensorEntity]] = {
-            entry_id: [] for entry_id in config_entry_ids
+            entry_id: []
+            for entry_id in await async_extract_config_entry_ids(hass, call)
         }
 
-        for entity in entities:
+        for entity in await async_extract_entities(hass, sensor_entities, call):
             entry_id = entity.coordinator.config_entry.entry_id
             entities_by_entry_id[entry_id].append(entity)
-
-        tasks = []
 
         for entry_id, entities in entities_by_entry_id.items():
             entry_data: EntryData = hass.data[DOMAIN][entry_id]
             sensor_keys = [entity.key for entity in entities]
-
-            if sensor_keys:
-                tasks.append(entry_data.remote.async_poll_sensors(sensor_keys))
-
-        if tasks:
-            await asyncio.wait(tasks)
+            await entry_data.remote.async_poll_sensors(sensor_keys)
 
     hass.services.async_register(
         DOMAIN,

@@ -47,9 +47,9 @@ async def async_setup_entry(
     entities = []
 
     for sensor in entry_data.remote.sensors_by_key.values():
-        if isinstance(sensor, BinarySensor) or sensor.is_controllable:
+        if isinstance(sensor, BinarySensor) or sensor.controllable:
             continue
-        if sensor.is_dynamic:
+        if sensor.dynamic:
             sensor.on_child_added.subscribe(child_added_listener)
             sensor.on_child_removed.subscribe(child_removed_listener)
             continue
@@ -78,8 +78,8 @@ class Entity(BaseSensorEntity, SensorEntity):
 
     @property
     def suggested_display_precision(self) -> int | None:
-        return self._options.get(CONF_SUGGESTED_DISPLAY_PRECISION)
+        return self._attributes.get(CONF_SUGGESTED_DISPLAY_PRECISION)
 
     @property
     def suggested_unit_of_measurement(self) -> str | None:
-        return self._options.get(CONF_SUGGESTED_UNIT_OF_MEASUREMENT)
+        return self._attributes.get(CONF_SUGGESTED_UNIT_OF_MEASUREMENT)

@@ -32,6 +32,11 @@ execute_command:
       example: "echo 'Hello world'"
       selector:
         text:
+    timeout:
+      name: Timeout
+      description: Timeout of the command.
+      selector:
+        number:
     context:
       name: Context
       description: Variables to format the command.
@@ -64,9 +69,14 @@ poll_sensor:
   name: Poll sensor
   description: Poll a sensor on the device.
   target:
+    device:
+      integration: ssh
     entity:
       integration: ssh
       domain:
-        - sensor
         - binary_sensor
+        - number
+        - select
+        - sensor
         - switch
+        - text

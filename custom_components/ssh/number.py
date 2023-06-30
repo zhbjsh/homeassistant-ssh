@@ -36,9 +36,9 @@ async def async_setup_entry(
     entities = []
 
     for sensor in entry_data.remote.sensors_by_key.values():
-        if not (isinstance(sensor, NumberSensor) and sensor.is_controllable):
+        if not (isinstance(sensor, NumberSensor) and sensor.controllable):
             continue
-        if sensor.is_dynamic:
+        if sensor.dynamic:
             sensor.on_child_added.subscribe(child_added_listener)
             sensor.on_child_removed.subscribe(child_removed_listener)
             continue
@@ -73,7 +73,7 @@ class Entity(BaseSensorEntity, NumberEntity):
 
     @property
     def mode(self) -> NumberMode:
-        return self._options.get(CONF_MODE, NumberMode.AUTO)
+        return self._attributes.get(CONF_MODE, NumberMode.AUTO)
 
     async def async_set_native_value(self, value: float) -> None:
         await self._remote.async_set_sensor_value(self.key, value)

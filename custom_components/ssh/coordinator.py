@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import timedelta
-import logging
 
 from ssh_remote_control import (
-    CommandExecuteError,
-    CommandFormatError,
+    CommandError,
     Remote,
     SensorCommand,
     SSHAuthError,
@@ -16,8 +14,6 @@ from ssh_remote_control import (
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class StateCoordinator(DataUpdateCoordinator):
@@ -29,8 +25,8 @@ class StateCoordinator(DataUpdateCoordinator):
     ) -> None:
         super().__init__(
             hass,
-            _LOGGER,
-            name=remote.name,
+            remote.logger,
+            name=f"{remote.name} state",
             update_interval=timedelta(seconds=update_interval),
         )
         self.remote = remote
@@ -59,9 +55,8 @@ class SensorCommandCoordinator(DataUpdateCoordinator):
     ) -> None:
         super().__init__(
             hass,
-            _LOGGER,
-            name=f"{remote.name} "
-            + f"(sensor command {remote.sensor_commands.index(command)})",
+            remote.logger,
+            name=f"{remote.name} {', '.join(sensor.key for sensor in command.sensors)}",
             update_interval=timedelta(seconds=command.interval),
         )
         self.remote = remote
@@ -74,7 +69,7 @@ class SensorCommandCoordinator(DataUpdateCoordinator):
             return
         try:
             await self.remote.async_execute_command(self._command)
-        except (CommandFormatError, CommandExecuteError):
+        except CommandError:
             pass
         except Exception as exc:
             raise UpdateFailed(f"Exception updating {self.name}: {exc}") from exc

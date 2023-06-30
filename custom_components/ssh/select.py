@@ -1,20 +1,16 @@
-"""Platform for binary sensor integration."""
+"""Platform for select integration."""
 from __future__ import annotations
 
-from ssh_remote_control import BinarySensor
+from ssh_remote_control import TextSensor
 
-from homeassistant.components.binary_sensor import (
-    ENTITY_ID_FORMAT,
-    BinarySensorDeviceClass,
-    BinarySensorEntity,
-)
+from homeassistant.components.select import ENTITY_ID_FORMAT, SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import EntryData
-from .base_entity import BaseEntity, BaseSensorEntity
+from .base_entity import BaseSensorEntity
 from .const import DOMAIN
 from .helpers import get_child_added_listener, get_child_removed_listener
 
@@ -24,7 +20,7 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the SSH binary sensor platform."""
+    """Set up the SSH text platform."""
     platform = entity_platform.async_get_current_platform()
     entry_data: EntryData = hass.data[DOMAIN][config_entry.entry_id]
 
@@ -36,13 +32,12 @@ async def async_setup_entry(
         hass, platform, entry_data.state_coordinator, Entity
     )
 
-    entities = [
-        NetworkEntity(entry_data.state_coordinator, config_entry),
-        SSHEntity(entry_data.state_coordinator, config_entry),
-    ]
+    entities = []
 
     for sensor in entry_data.remote.sensors_by_key.values():
-        if not isinstance(sensor, BinarySensor) or sensor.controllable:
+        if not (
+            isinstance(sensor, TextSensor) and sensor.controllable and sensor.options
+        ):
             continue
         if sensor.dynamic:
             sensor.on_child_added.subscribe(child_added_listener)
@@ -53,36 +48,17 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class Entity(BaseSensorEntity, BinarySensorEntity):
+class Entity(BaseSensorEntity, SelectEntity):
     _entity_id_format = ENTITY_ID_FORMAT
-    _sensor: BinarySensor
+    _sensor: TextSensor
 
     @property
-    def is_on(self) -> bool | None:
+    def options(self) -> list[str]:
+        return self._sensor.options
+
+    @property
+    def current_option(self) -> str | None:
         return self._sensor.value
 
-
-class NetworkEntity(BaseEntity, BinarySensorEntity):
-    _entity_id_format = ENTITY_ID_FORMAT
-    _attr_name = "Network"
-
-    @property
-    def device_class(self) -> BinarySensorDeviceClass:
-        return BinarySensorDeviceClass.CONNECTIVITY
-
-    @property
-    def is_on(self) -> bool:
-        return self._remote.state.is_online
-
-
-class SSHEntity(BaseEntity, BinarySensorEntity):
-    _entity_id_format = ENTITY_ID_FORMAT
-    _attr_name = "SSH"
-
-    @property
-    def device_class(self) -> BinarySensorDeviceClass:
-        return BinarySensorDeviceClass.CONNECTIVITY
-
-    @property
-    def is_on(self) -> bool:
-        return self._remote.state.is_connected
+    async def async_select_option(self, option: str) -> None:
+        await self._remote.async_set_sensor_value(self.key, option)

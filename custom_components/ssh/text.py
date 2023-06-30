@@ -36,9 +36,13 @@ async def async_setup_entry(
     entities = []
 
     for sensor in entry_data.remote.sensors_by_key.values():
-        if not (isinstance(sensor, TextSensor) and sensor.is_controllable):
+        if not (
+            isinstance(sensor, TextSensor)
+            and sensor.controllable
+            and not sensor.options
+        ):
             continue
-        if sensor.is_dynamic:
+        if sensor.dynamic:
             sensor.on_child_added.subscribe(child_added_listener)
             sensor.on_child_removed.subscribe(child_removed_listener)
             continue
@@ -73,7 +77,7 @@ class Entity(BaseSensorEntity, TextEntity):
 
     @property
     def mode(self) -> TextMode:
-        return self._options.get(CONF_MODE, TextMode.TEXT)
+        return self._attributes.get(CONF_MODE, TextMode.TEXT)
 
     async def async_set_value(self, value: str) -> None:
         await self._remote.async_set_sensor_value(self.key, value)

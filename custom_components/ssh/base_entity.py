@@ -20,15 +20,15 @@ class BaseEntity(CoordinatorEntity):
         self,
         state_coordinator: StateCoordinator,
         config_entry: ConfigEntry,
-        options: dict | None = None,
+        attributes: dict | None = None,
     ) -> None:
         super().__init__(state_coordinator)
         self._remote = state_coordinator.remote
         self._config_entry = config_entry
-        self._options = options or {}
+        self._attributes = attributes or {}
         self.entity_id = generate_entity_id(
             self._entity_id_format,
-            f"{self.coordinator.name}_{self._id}",
+            f"{self._remote.name}_{self._id}",
             [],
             self.coordinator.hass,
         )
@@ -52,15 +52,15 @@ class BaseEntity(CoordinatorEntity):
 
     @property
     def device_class(self) -> Any | None:
-        return self._options.get(CONF_DEVICE_CLASS)
+        return self._attributes.get(CONF_DEVICE_CLASS)
 
     @property
     def icon(self) -> str | None:
-        return self._options.get(CONF_ICON)
+        return self._attributes.get(CONF_ICON)
 
     @property
     def entity_registry_enabled_default(self) -> bool:
-        return self._options.get(CONF_ENABLED, True)
+        return self._attributes.get(CONF_ENABLED, True)
 
     def _handle_remote_state_change(self, state: State) -> None:
         self.schedule_update_ha_state()
@@ -80,7 +80,7 @@ class BaseActionEntity(BaseEntity):
         command: ActionCommand,
     ) -> None:
         self._command = command
-        super().__init__(state_coordinator, config_entry, command.options)
+        super().__init__(state_coordinator, config_entry, command.attributes)
 
     @property
     def _id(self) -> str:
@@ -107,7 +107,7 @@ class BaseSensorEntity(BaseEntity):
         sensor: Sensor,
     ) -> None:
         self._sensor = sensor
-        super().__init__(state_coordinator, config_entry, sensor.options)
+        super().__init__(state_coordinator, config_entry, sensor.attributes)
 
     @property
     def _id(self) -> str:
