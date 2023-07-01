@@ -6,15 +6,15 @@ import logging
 import re
 from typing import Any
 
-from ssh_remote_control import (
+from ssh_terminal_manager import (
     DEFAULT_ADD_HOST_KEYS,
-    DEFAULT_SSH_PORT,
+    DEFAULT_PORT,
     Collection,
     OfflineError,
-    Remote,
     SSHAuthError,
     SSHConnectError,
     SSHHostKeyUnknownError,
+    SSHManager,
     default_collections,
 )
 import voluptuous as vol
@@ -34,12 +34,15 @@ from homeassistant.const import (
     CONF_MINIMUM,
     CONF_MODE,
     CONF_NAME,
+    CONF_PASSWORD,
     CONF_PAYLOAD_OFF,
     CONF_PAYLOAD_ON,
+    CONF_PORT,
     CONF_SCAN_INTERVAL,
     CONF_TIMEOUT,
     CONF_TYPE,
     CONF_UNIT_OF_MEASUREMENT,
+    CONF_USERNAME,
     CONF_VALUE_TEMPLATE,
 )
 from homeassistant.core import HomeAssistant, callback
@@ -62,20 +65,17 @@ from .const import (
     CONF_COMMAND_TIMEOUT,
     CONF_DEFAULT_COMMANDS,
     CONF_DYNAMIC,
+    CONF_HOST_KEYS_FILENAME,
     CONF_INTEGER,
     CONF_KEY,
+    CONF_KEY_FILENAME,
     CONF_OPTIONS,
     CONF_PATTERN,
     CONF_PING_TIMEOUT,
     CONF_SENSOR_COMMANDS,
     CONF_SENSORS,
     CONF_SEPARATOR,
-    CONF_SSH_HOST_KEYS_FILE,
-    CONF_SSH_KEY_FILE,
-    CONF_SSH_PASSWORD,
-    CONF_SSH_PORT,
     CONF_SSH_TIMEOUT,
-    CONF_SSH_USER,
     CONF_SUGGESTED_DISPLAY_PRECISION,
     CONF_SUGGESTED_UNIT_OF_MEASUREMENT,
     CONF_UPDATE_INTERVAL,
@@ -223,14 +223,14 @@ def validate_options(hass: HomeAssistant, options: dict[str, Any]) -> dict[str, 
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the config user input."""
-    remote = Remote(
+    manager = SSHManager(
         data[CONF_HOST],
         add_host_keys=data[CONF_ADD_HOST_KEYS],
-        ssh_port=data[CONF_SSH_PORT],
-        ssh_user=data.get(CONF_SSH_USER),
-        ssh_password=data.get(CONF_SSH_PASSWORD),
-        ssh_key_file=data.get(CONF_SSH_KEY_FILE),
-        ssh_host_keys_file=data.get(CONF_SSH_HOST_KEYS_FILE),
+        port=data[CONF_PORT],
+        username=data.get(CONF_USERNAME),
+        password=data.get(CONF_PASSWORD),
+        key_filename=data.get(CONF_KEY_FILENAME),
+        host_keys_filename=data.get(CONF_HOST_KEYS_FILENAME),
         collection=(
             getattr(default_collections, key)
             if (key := data[CONF_DEFAULT_COMMANDS]) != "none"
@@ -239,34 +239,34 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         logger=_LOGGER,
     )
 
-    await remote.async_update_state(raise_errors=True)
-    await remote.async_disconnect()
+    await manager.async_update_state(raise_errors=True)
+    await manager.async_disconnect()
 
-    if mac_address := remote.mac_address:
-        _LOGGER.info("%s: Detected MAC address: %s", remote.host, mac_address)
+    if mac_address := manager.mac_address:
+        _LOGGER.info("%s: Detected MAC address: %s", manager.host, mac_address)
         try:
             data[CONF_MAC] = validate_mac_address(mac_address)
         except MACAddressInvalidError:
-            _LOGGER.info("%s: Detected MAC address is invalid", remote.host)
+            _LOGGER.info("%s: Detected MAC address is invalid", manager.host)
 
-    if hostname := remote.hostname:
-        _LOGGER.info("%s: Detected hostname: %s", remote.host, hostname)
+    if hostname := manager.hostname:
+        _LOGGER.info("%s: Detected hostname: %s", manager.host, hostname)
         try:
             data[CONF_NAME] = await validate_name(hass, hostname)
         except NameExistsError:
-            _LOGGER.info("%s: Detected hostname exists already", remote.host)
+            _LOGGER.info("%s: Detected hostname exists already", manager.host)
 
     options = {
-        CONF_ALLOW_TURN_OFF: remote.allow_turn_off,
+        CONF_ALLOW_TURN_OFF: manager.allow_turn_off,
         CONF_UPDATE_INTERVAL: DEFAULT_UPDATE_INTERVAL,
-        CONF_PING_TIMEOUT: remote.ping_timeout,
-        CONF_SSH_TIMEOUT: remote.ssh_timeout,
-        CONF_COMMAND_TIMEOUT: remote.command_timeout,
+        CONF_PING_TIMEOUT: manager.ping_timeout,
+        CONF_SSH_TIMEOUT: manager.ssh_timeout,
+        CONF_COMMAND_TIMEOUT: manager.command_timeout,
         CONF_ACTION_COMMANDS: [
-            get_action_command_config(command) for command in remote.action_commands
+            get_action_command_config(command) for command in manager.action_commands
         ],
         CONF_SENSOR_COMMANDS: [
-            get_sensor_command_config(command) for command in remote.sensor_commands
+            get_sensor_command_config(command) for command in manager.sensor_commands
         ],
     }
 
@@ -408,42 +408,42 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(
-                        CONF_ADD_HOST_KEYS,
-                        default=self._data.get(
-                            CONF_ADD_HOST_KEYS, DEFAULT_ADD_HOST_KEYS
-                        ),
-                    ): bool,
-                    vol.Required(
                         CONF_HOST,
                         default=self._data.get(CONF_HOST, vol.UNDEFINED),
+                    ): str,
+                    vol.Required(
+                        CONF_PORT,
+                        default=self._data.get(CONF_PORT, DEFAULT_PORT),
+                    ): int,
+                    vol.Optional(
+                        CONF_USERNAME,
+                        default=self._data.get(CONF_USERNAME, vol.UNDEFINED),
+                    ): str,
+                    vol.Optional(
+                        CONF_PASSWORD,
+                        default=self._data.get(CONF_PASSWORD, vol.UNDEFINED),
                     ): str,
                     vol.Required(
                         CONF_DEFAULT_COMMANDS,
                         default=self._data.get(CONF_DEFAULT_COMMANDS, vol.UNDEFINED),
                     ): DEFAULT_COMMANDS_SELECTOR,
-                    vol.Required(
-                        CONF_SSH_PORT,
-                        default=self._data.get(CONF_SSH_PORT, DEFAULT_SSH_PORT),
-                    ): int,
                     vol.Optional(
-                        CONF_SSH_USER,
-                        default=self._data.get(CONF_SSH_USER, vol.UNDEFINED),
+                        CONF_KEY_FILENAME,
+                        default=self._data.get(CONF_KEY_FILENAME, vol.UNDEFINED),
                     ): str,
                     vol.Optional(
-                        CONF_SSH_PASSWORD,
-                        default=self._data.get(CONF_SSH_PASSWORD, vol.UNDEFINED),
-                    ): str,
-                    vol.Optional(
-                        CONF_SSH_KEY_FILE,
-                        default=self._data.get(CONF_SSH_KEY_FILE, vol.UNDEFINED),
-                    ): str,
-                    vol.Optional(
-                        CONF_SSH_HOST_KEYS_FILE,
+                        CONF_HOST_KEYS_FILENAME,
                         default=self._data.get(
-                            CONF_SSH_HOST_KEYS_FILE,
+                            CONF_HOST_KEYS_FILENAME,
                             f"{self.hass.config.config_dir}/{DEFAULT_HOST_KEYS_FILENAME}",
                         ),
                     ): str,
+                    vol.Required(
+                        CONF_ADD_HOST_KEYS,
+                        default=self._data.get(
+                            CONF_ADD_HOST_KEYS, DEFAULT_ADD_HOST_KEYS
+                        ),
+                    ): bool,
                 }
             ),
         )

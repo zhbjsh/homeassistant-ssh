@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 
-from ssh_remote_control import BinarySensor, NumberSensor, TextSensor
+from ssh_terminal_manager import BinarySensor, NumberSensor, TextSensor
 
 from homeassistant.components.sensor import (
     ENTITY_ID_FORMAT,
@@ -46,7 +46,7 @@ async def async_setup_entry(
 
     entities = []
 
-    for sensor in entry_data.remote.sensors_by_key.values():
+    for sensor in entry_data.manager.sensors_by_key.values():
         if isinstance(sensor, BinarySensor) or sensor.controllable:
             continue
         if sensor.dynamic:

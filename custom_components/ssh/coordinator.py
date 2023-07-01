@@ -3,12 +3,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import timedelta
 
-from ssh_remote_control import (
+from ssh_terminal_manager import (
     CommandError,
-    Remote,
     SensorCommand,
     SSHAuthError,
     SSHHostKeyUnknownError,
+    SSHManager,
 )
 
 from homeassistant.core import HomeAssistant
@@ -20,22 +20,22 @@ class StateCoordinator(DataUpdateCoordinator):
     def __init__(
         self,
         hass: HomeAssistant,
-        remote: Remote,
+        manager: SSHManager,
         update_interval: int,
     ) -> None:
         super().__init__(
             hass,
-            remote.logger,
-            name=f"{remote.name} state",
+            manager.logger,
+            name=f"{manager.name} state",
             update_interval=timedelta(seconds=update_interval),
         )
-        self.remote = remote
+        self.manager = manager
         # Add listener to keep updating without any entities
         self.stop: Callable = self.async_add_listener(lambda: None)
 
     async def _async_update_data(self) -> None:
         try:
-            await self.remote.async_update_state()
+            await self.manager.async_update_state()
         except SSHHostKeyUnknownError as exc:
             self.stop()
             raise ConfigEntryError from exc
@@ -50,25 +50,25 @@ class SensorCommandCoordinator(DataUpdateCoordinator):
     def __init__(
         self,
         hass: HomeAssistant,
-        remote: Remote,
+        manager: SSHManager,
         command: SensorCommand,
     ) -> None:
         super().__init__(
             hass,
-            remote.logger,
-            name=f"{remote.name} {', '.join(sensor.key for sensor in command.sensors)}",
+            manager.logger,
+            name=f"{manager.name} {', '.join(sensor.key for sensor in command.sensors)}",
             update_interval=timedelta(seconds=command.interval),
         )
-        self.remote = remote
+        self.manager = manager
         self._command = command
         # Add listener to keep updating without any entities
         self.stop: Callable = self.async_add_listener(lambda: None)
 
     async def _async_update_data(self) -> None:
-        if not self.remote.state.is_connected:
+        if not self.manager.state.is_connected:
             return
         try:
-            await self.remote.async_execute_command(self._command)
+            await self.manager.async_execute_command(self._command)
         except CommandError:
             pass
         except Exception as exc:

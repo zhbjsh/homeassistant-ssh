@@ -3,21 +3,21 @@
     "step": {
       "user": {
         "data": {
-          "add_host_keys": "Add unknown host key to host keys file",
           "host": "[%key:common::config_flow::data::host%]",
+          "username": "[%key:common::config_flow::data::username%]",
+          "password": "[%key:common::config_flow::data::password%]",
+          "port": "[%key:common::config_flow::data::port%]",
           "default_commands": "Default commands",
-          "ssh_user": "SSH user",
-          "ssh_password": "SSH password",
-          "ssh_port": "SSH port",
-          "ssh_key_file": "SSH key file",
-          "ssh_host_keys_file": "SSH host keys file"
+          "key_filename": "Key file",
+          "host_keys_filename": "Host keys file",
+          "add_host_keys": "Add unknown host key to host keys file"
         }
       },
       "mac_address": {
-        "title": "MAC address",
+        "title": "Mac address",
         "description": "Please enter the MAC address of the device",
         "data": {
-          "mac_address": "MAC address"
+          "mac_address": "Mac address"
         }
       },
       "name": {

@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from ssh_remote_control import Sensor
+from ssh_terminal_manager import Sensor
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant

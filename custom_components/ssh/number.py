@@ -1,7 +1,7 @@
 """Platform for number integration."""
 from __future__ import annotations
 
-from ssh_remote_control import NumberSensor
+from ssh_terminal_manager import NumberSensor
 
 from homeassistant.components.number import ENTITY_ID_FORMAT, NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
@@ -35,7 +35,7 @@ async def async_setup_entry(
 
     entities = []
 
-    for sensor in entry_data.remote.sensors_by_key.values():
+    for sensor in entry_data.manager.sensors_by_key.values():
         if not (isinstance(sensor, NumberSensor) and sensor.controllable):
             continue
         if sensor.dynamic:
@@ -76,4 +76,4 @@ class Entity(BaseSensorEntity, NumberEntity):
         return self._attributes.get(CONF_MODE, NumberMode.AUTO)
 
     async def async_set_native_value(self, value: float) -> None:
-        await self._remote.async_set_sensor_value(self.key, value)
+        await self._manager.async_set_sensor_value(self.key, value)

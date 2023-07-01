@@ -1,6 +1,6 @@
 from typing import Any
 
-from ssh_remote_control import ActionCommand, Sensor, State
+from ssh_terminal_manager import ActionCommand, Sensor, State
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_DEVICE_CLASS, CONF_ENABLED, CONF_ICON
@@ -23,12 +23,12 @@ class BaseEntity(CoordinatorEntity):
         attributes: dict | None = None,
     ) -> None:
         super().__init__(state_coordinator)
-        self._remote = state_coordinator.remote
+        self._manager = state_coordinator.manager
         self._config_entry = config_entry
         self._attributes = attributes or {}
         self.entity_id = generate_entity_id(
             self._entity_id_format,
-            f"{self._remote.name}_{self._id}",
+            f"{self._manager.name}_{self._id}",
             [],
             self.coordinator.hass,
         )
@@ -42,8 +42,8 @@ class BaseEntity(CoordinatorEntity):
         return DeviceInfo(
             identifiers={(DOMAIN, self._config_entry.unique_id)},
             name=self._config_entry.title,
-            sw_version=self._remote.os_version,
-            hw_version=self._remote.machine_type,
+            sw_version=self._manager.os_version,
+            hw_version=self._manager.machine_type,
         )
 
     @property
@@ -62,14 +62,14 @@ class BaseEntity(CoordinatorEntity):
     def entity_registry_enabled_default(self) -> bool:
         return self._attributes.get(CONF_ENABLED, True)
 
-    def _handle_remote_state_change(self, state: State) -> None:
+    def _handle_manager_state_change(self, state: State) -> None:
         self.schedule_update_ha_state()
 
     async def async_added_to_hass(self) -> None:
-        self._remote.state.on_change.subscribe(self._handle_remote_state_change)
+        self._manager.state.on_change.subscribe(self._handle_manager_state_change)
 
     async def async_will_remove_from_hass(self) -> None:
-        self._remote.state.on_change.unsubscribe(self._handle_remote_state_change)
+        self._manager.state.on_change.unsubscribe(self._handle_manager_state_change)
 
 
 class BaseActionEntity(BaseEntity):
@@ -96,7 +96,7 @@ class BaseActionEntity(BaseEntity):
 
     @property
     def available(self) -> bool:
-        return self._remote.state.is_connected
+        return self._manager.state.is_connected
 
 
 class BaseSensorEntity(BaseEntity):
@@ -123,7 +123,7 @@ class BaseSensorEntity(BaseEntity):
 
     @property
     def available(self) -> bool:
-        return self._remote.state.is_connected
+        return self._manager.state.is_connected
 
     def _handle_sensor_update(self, sensor: Sensor) -> None:
         self.schedule_update_ha_state()

@@ -3,11 +3,8 @@
 DOMAIN = "ssh"
 
 CONF_DEFAULT_COMMANDS = "default_commands"
-CONF_SSH_PORT = "ssh_port"
-CONF_SSH_USER = "ssh_user"
-CONF_SSH_PASSWORD = "ssh_password"
-CONF_SSH_KEY_FILE = "ssh_key_file"
-CONF_SSH_HOST_KEYS_FILE = "ssh_host_keys_file"
+CONF_KEY_FILENAME = "key_filename"
+CONF_HOST_KEYS_FILENAME = "host_keys_filename"
 CONF_PING_TIMEOUT = "ping_timeout"
 CONF_SSH_TIMEOUT = "ssh_timeout"
 CONF_COMMAND_TIMEOUT = "command_timeout"

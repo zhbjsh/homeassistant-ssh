@@ -1,7 +1,7 @@
 """Platform for select integration."""
 from __future__ import annotations
 
-from ssh_remote_control import TextSensor
+from ssh_terminal_manager import TextSensor
 
 from homeassistant.components.select import ENTITY_ID_FORMAT, SelectEntity
 from homeassistant.config_entries import ConfigEntry
@@ -34,7 +34,7 @@ async def async_setup_entry(
 
     entities = []
 
-    for sensor in entry_data.remote.sensors_by_key.values():
+    for sensor in entry_data.manager.sensors_by_key.values():
         if not (
             isinstance(sensor, TextSensor) and sensor.controllable and sensor.options
         ):
@@ -61,4 +61,4 @@ class Entity(BaseSensorEntity, SelectEntity):
         return self._sensor.value
 
     async def async_select_option(self, option: str) -> None:
-        await self._remote.async_set_sensor_value(self.key, option)
+        await self._manager.async_set_sensor_value(self.key, option)

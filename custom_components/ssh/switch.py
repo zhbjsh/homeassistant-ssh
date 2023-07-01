@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ssh_remote_control import BinarySensor, Sensor
+from ssh_terminal_manager import BinarySensor
 
 from homeassistant.components.switch import ENTITY_ID_FORMAT, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
@@ -36,7 +36,7 @@ async def async_setup_entry(
 
     entities = []
 
-    for sensor in entry_data.remote.sensors_by_key.values():
+    for sensor in entry_data.manager.sensors_by_key.values():
         if not (isinstance(sensor, BinarySensor) and sensor.controllable):
             continue
         if sensor.dynamic:
@@ -57,7 +57,7 @@ class Entity(BaseSensorEntity, SwitchEntity):
         return self._sensor.value
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        await self._remote.async_set_sensor_value(self.key, True)
+        await self._manager.async_set_sensor_value(self.key, True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        await self._remote.async_set_sensor_value(self.key, False)
+        await self._manager.async_set_sensor_value(self.key, False)

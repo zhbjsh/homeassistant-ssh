@@ -1,7 +1,7 @@
 """Platform for button integration."""
 from __future__ import annotations
 
-from ssh_remote_control import ActionKey
+from ssh_terminal_manager import ActionKey
 
 from homeassistant.components.button import ENTITY_ID_FORMAT, ButtonEntity
 from homeassistant.config_entries import ConfigEntry
@@ -23,8 +23,8 @@ async def async_setup_entry(
 
     entities = [PowerEntity(entry_data.state_coordinator, config_entry)]
 
-    for command in entry_data.remote.action_commands:
-        if command.get_context_keys(entry_data.remote):
+    for command in entry_data.manager.action_commands:
+        if command.get_context_keys(entry_data.manager):
             continue
         if command.key == ActionKey.TURN_OFF:
             continue
@@ -37,7 +37,7 @@ class Entity(BaseActionEntity, ButtonEntity):
     _entity_id_format = ENTITY_ID_FORMAT
 
     async def async_press(self) -> None:
-        await self._remote.async_run_action(self.key)
+        await self._manager.async_run_action(self.key)
 
 
 class PowerEntity(BaseEntity, ButtonEntity):
@@ -50,21 +50,21 @@ class PowerEntity(BaseEntity, ButtonEntity):
 
     @property
     def available(self) -> bool:
-        if not self._remote.state.is_online and self._remote.mac_address:
+        if not self._manager.state.is_online and self._manager.mac_address:
             return True
 
         if (
-            self._remote.state.is_connected
-            and self._remote.allow_turn_off
-            and ActionKey.TURN_OFF in self._remote.action_commands_by_key
+            self._manager.state.is_connected
+            and self._manager.allow_turn_off
+            and ActionKey.TURN_OFF in self._manager.action_commands_by_key
         ):
             return True
 
         return False
 
     async def async_press(self) -> None:
-        if not self._remote.state.is_online:
-            await self._remote.async_turn_on()
+        if not self._manager.state.is_online:
+            await self._manager.async_turn_on()
 
-        elif self._remote.state.is_connected:
-            await self._remote.async_turn_off()
+        elif self._manager.state.is_connected:
+            await self._manager.async_turn_off()

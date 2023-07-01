@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from ssh_remote_control import (
+from ssh_terminal_manager import (
     ActionCommand,
     ActionKey,
     BinarySensor,

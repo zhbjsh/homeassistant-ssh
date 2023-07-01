@@ -1,7 +1,7 @@
 """Platform for binary sensor integration."""
 from __future__ import annotations
 
-from ssh_remote_control import BinarySensor
+from ssh_terminal_manager import BinarySensor
 
 from homeassistant.components.binary_sensor import (
     ENTITY_ID_FORMAT,
@@ -41,7 +41,7 @@ async def async_setup_entry(
         SSHEntity(entry_data.state_coordinator, config_entry),
     ]
 
-    for sensor in entry_data.remote.sensors_by_key.values():
+    for sensor in entry_data.manager.sensors_by_key.values():
         if not isinstance(sensor, BinarySensor) or sensor.controllable:
             continue
         if sensor.dynamic:
@@ -72,7 +72,7 @@ class NetworkEntity(BaseEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
-        return self._remote.state.is_online
+        return self._manager.state.is_online
 
 
 class SSHEntity(BaseEntity, BinarySensorEntity):
@@ -85,4 +85,4 @@ class SSHEntity(BaseEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
-        return self._remote.state.is_connected
+        return self._manager.state.is_connected

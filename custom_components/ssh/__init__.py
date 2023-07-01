@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import logging
 
-from ssh_remote_control import Command, CommandError, Remote
+from ssh_terminal_manager import Command, CommandError, SSHManager
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
@@ -15,7 +15,10 @@ from homeassistant.const import (
     CONF_HOST,
     CONF_MAC,
     CONF_NAME,
+    CONF_PASSWORD,
+    CONF_PORT,
     CONF_TIMEOUT,
+    CONF_USERNAME,
     Platform,
 )
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -30,14 +33,11 @@ from .const import (
     CONF_ALLOW_TURN_OFF,
     CONF_COMMAND_TIMEOUT,
     CONF_CONTEXT,
+    CONF_HOST_KEYS_FILENAME,
     CONF_KEY,
+    CONF_KEY_FILENAME,
     CONF_PING_TIMEOUT,
-    CONF_SSH_HOST_KEYS_FILE,
-    CONF_SSH_KEY_FILE,
-    CONF_SSH_PASSWORD,
-    CONF_SSH_PORT,
     CONF_SSH_TIMEOUT,
-    CONF_SSH_USER,
     CONF_UPDATE_INTERVAL,
     DOMAIN,
     SERVICE_EXECUTE_COMMAND,
@@ -86,7 +86,7 @@ RUN_ACTION_SCHEMA = vol.Schema(
 class EntryData:
     """The EntryData class."""
 
-    remote: Remote
+    manager: SSHManager
     state_coordinator: StateCoordinator
     command_coordinators: list[SensorCommandCoordinator]
 
@@ -101,15 +101,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     data = entry.data
     options = entry.options
 
-    remote = Remote(
+    manager = SSHManager(
         data[CONF_HOST],
         name=data[CONF_NAME],
         mac_address=data[CONF_MAC],
-        ssh_port=data[CONF_SSH_PORT],
-        ssh_user=data.get(CONF_SSH_USER),
-        ssh_password=data.get(CONF_SSH_PASSWORD),
-        ssh_key_file=data.get(CONF_SSH_KEY_FILE),
-        ssh_host_keys_file=data.get(CONF_SSH_HOST_KEYS_FILE),
+        port=data[CONF_PORT],
+        username=data.get(CONF_USERNAME),
+        password=data.get(CONF_PASSWORD),
+        key_filename=data.get(CONF_KEY_FILENAME),
+        host_keys_filename=data.get(CONF_HOST_KEYS_FILENAME),
         ssh_timeout=options[CONF_SSH_TIMEOUT],
         ping_timeout=options[CONF_PING_TIMEOUT],
         command_timeout=options[CONF_COMMAND_TIMEOUT],
@@ -118,17 +118,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         logger=_LOGGER,
     )
 
-    state_coordinator = StateCoordinator(hass, remote, options[CONF_UPDATE_INTERVAL])
+    state_coordinator = StateCoordinator(hass, manager, options[CONF_UPDATE_INTERVAL])
 
     command_coordinators = [
-        SensorCommandCoordinator(hass, remote, command)
-        for command in remote.sensor_commands
+        SensorCommandCoordinator(hass, manager, command)
+        for command in manager.sensor_commands
         if command.interval
     ]
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = EntryData(
-        remote, state_coordinator, command_coordinators
+        manager, state_coordinator, command_coordinators
     )
 
     entry.async_on_unload(entry.add_update_listener(_config_entry_listener))
@@ -138,13 +138,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def turn_on(call: ServiceCall):
         for entry_id in await async_extract_config_entry_ids(hass, call):
             entry_data: EntryData = hass.data[DOMAIN][entry_id]
-            await entry_data.remote.async_turn_on()
+            await entry_data.manager.async_turn_on()
 
     async def turn_off(call: ServiceCall):
         for entry_id in await async_extract_config_entry_ids(hass, call):
             entry_data: EntryData = hass.data[DOMAIN][entry_id]
             try:
-                await entry_data.remote.async_turn_off()
+                await entry_data.manager.async_turn_off()
             except CommandError:
                 pass
 
@@ -161,7 +161,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for entry_id in await async_extract_config_entry_ids(hass, call):
             entry_data: EntryData = hass.data[DOMAIN][entry_id]
             try:
-                await entry_data.remote.async_execute_command(command, context)
+                await entry_data.manager.async_execute_command(command, context)
             except CommandError:
                 pass
 
@@ -172,7 +172,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for entry_id in await async_extract_config_entry_ids(hass, call):
             entry_data: EntryData = hass.data[DOMAIN][entry_id]
             try:
-                await entry_data.remote.async_run_action(action_key, context)
+                await entry_data.manager.async_run_action(action_key, context)
             except CommandError:
                 pass
 
@@ -196,7 +196,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for entry_id, entities in entities_by_entry_id.items():
             entry_data: EntryData = hass.data[DOMAIN][entry_id]
             sensor_keys = [entity.key for entity in entities]
-            await entry_data.remote.async_poll_sensors(sensor_keys)
+            await entry_data.manager.async_poll_sensors(sensor_keys)
 
     hass.services.async_register(
         DOMAIN,
@@ -242,6 +242,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for coordinator in entry_data.command_coordinators:
             coordinator.stop()
 
-        await entry_data.remote.async_disconnect()
+        await entry_data.manager.async_disconnect()
 
     return unload_ok

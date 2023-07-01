@@ -17,10 +17,10 @@
         "step": {
             "mac_address": {
                 "data": {
-                    "mac_address": "MAC address"
+                    "mac_address": "Mac address"
                 },
                 "description": "Please enter the MAC address of the device",
-                "title": "MAC address"
+                "title": "Mac address"
             },
             "name": {
                 "data": {
@@ -38,11 +38,11 @@
                     "add_host_keys": "Add unknown host key to host keys file",
                     "default_commands": "Default commands",
                     "host": "Host",
-                    "ssh_host_keys_file": "SSH host keys file",
-                    "ssh_key_file": "SSH key file",
-                    "ssh_password": "SSH password",
-                    "ssh_port": "SSH port",
-                    "ssh_user": "SSH user"
+                    "host_keys_filename": "Host keys file",
+                    "key_filename": "Key file",
+                    "password": "Password",
+                    "port": "Port",
+                    "username": "Username"
                 }
             }
         }
