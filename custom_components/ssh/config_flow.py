@@ -1,24 +1,12 @@
 """Config flow for SSH integration."""
 from __future__ import annotations
 
-from collections.abc import Mapping
 import logging
 import re
+from collections.abc import Mapping
 from typing import Any
 
-from ssh_terminal_manager import (
-    DEFAULT_ADD_HOST_KEYS,
-    DEFAULT_PORT,
-    Collection,
-    OfflineError,
-    SSHAuthError,
-    SSHConnectError,
-    SSHHostKeyUnknownError,
-    SSHManager,
-    default_collections,
-)
 import voluptuous as vol
-
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -56,6 +44,17 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
 )
 from homeassistant.util import slugify
+from ssh_terminal_manager import (
+    DEFAULT_ADD_HOST_KEYS,
+    DEFAULT_PORT,
+    Collection,
+    OfflineError,
+    SSHAuthError,
+    SSHConnectError,
+    SSHHostKeyUnknownError,
+    SSHManager,
+    default_collections,
+)
 
 from .const import (
     CONF_ACTION_COMMANDS,
@@ -102,12 +101,8 @@ SENSOR_SCHEMA = vol.Schema(
         vol.Optional(CONF_UNIT_OF_MEASUREMENT): str,
         vol.Optional(CONF_VALUE_TEMPLATE): str,
         vol.Optional(CONF_COMMAND_SET): str,
-        vol.Optional(CONF_SUGGESTED_UNIT_OF_MEASUREMENT): str,
-        vol.Optional(CONF_SUGGESTED_DISPLAY_PRECISION): int,
-        vol.Optional(CONF_MODE): str,
         vol.Optional(CONF_DEVICE_CLASS): str,
         vol.Optional(CONF_ICON): str,
-        vol.Optional(CONF_ENABLED): bool,
     }
 )
 
@@ -117,6 +112,7 @@ TEXT_SENSOR_SCHEMA = SENSOR_SCHEMA.extend(
         vol.Optional(CONF_MAXIMUM): int,
         vol.Optional(CONF_PATTERN): str,
         vol.Optional(CONF_OPTIONS): list,
+        vol.Optional(CONF_MODE): str,
     }
 )
 
@@ -126,6 +122,7 @@ NUMBER_SENSOR_SCHEMA = SENSOR_SCHEMA.extend(
         vol.Optional(CONF_INTEGER): bool,
         vol.Optional(CONF_MINIMUM): vol.Coerce(float),
         vol.Optional(CONF_MAXIMUM): vol.Coerce(float),
+        vol.Optional(CONF_MODE): str,
     }
 )
 
@@ -152,7 +149,6 @@ ACTION_COMMAND_SCHEMA = COMMAND_SCHEMA.extend(
         vol.Optional(CONF_KEY): str,
         vol.Optional(CONF_DEVICE_CLASS): str,
         vol.Optional(CONF_ICON): str,
-        vol.Optional(CONF_ENABLED): bool,
     }
 )
 
