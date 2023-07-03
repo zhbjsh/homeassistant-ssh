@@ -72,8 +72,6 @@ If you put a variable in curly braces that is not the key of a sensor, you have 
 
 When a action command doesn't require [context](#context), it will appear as button entity in Home Assistant. Action commands with context can be executed with [`run_action`](#service-sshrun_action).
 
-#### Action command schema
-
 | Name           | Description                                                                                                                | Type    | Required |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------- | ------- | -------- |
 | `command`      | Command to execute                                                                                                         | string  | yes      |
@@ -86,8 +84,6 @@ When a action command doesn't require [context](#context), it will appear as but
 ### Sensor commands ([examples](#sensor-command-examples))
 
 Sensor commands contain a list of one or more sensors that will be updated every time the command executes. This happens when the device connects, when the `scan_interval` has passed or when one of the sensors gets polled manually with [`poll_sensor`](#service-sshpoll_sensor).
-
-#### Sensor command schema
 
 | Name            | Description        | Type    | Required |
 | --------------- | ------------------ | ------- | -------- |
@@ -108,8 +104,6 @@ Static sensors are created by default. They can extract a fixed number of values
 
 Dynamic sensors are created by setting `dynamic: true`. They can extract a variable number of values from the command output. There can only be one dynamic sensor per sensor command. Each line of the command output is used to get value and name of one "child sensor". Values and names must be separated by either one or more spaces or a `separator` defined in the dynamic sensor. All child sensors of a dynamic sensor share the attributes of their "parent" (`value_type`, `unit_of_measurement`, etc.).
 
-#### Sensor schema
-
 | Name                  | Description        | Type    | Required |
 | --------------------- | ------------------ | ------- | -------- |
 | `name`                | Name of the sensor | string  | no       |
@@ -121,7 +115,7 @@ Dynamic sensors are created by setting `dynamic: true`. They can extract a varia
 | `command_set`         |                    | string  | no       |
 | `icon`                | Icon of the entity | string  | no       |
 
-#### Specific options for text sensors
+#### Text sensors
 
 | Name           | Description                                                                                                                | Type    | Required |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------- | ------- | -------- |
@@ -132,7 +126,7 @@ Dynamic sensors are created by setting `dynamic: true`. They can extract a varia
 | `mode`         |                                                                                                                            | string  | no       |
 | `device_class` | Device class of the [sensor](https://developers.home-assistant.io/docs/core/entity/sensor#available-device-classes) entity | string  | no       |
 
-#### Specific options for number sensors
+#### Number sensors
 
 | Name           | Description                                                                                                                                                                                                                   | Type       | Required |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | -------- |
@@ -143,7 +137,7 @@ Dynamic sensors are created by setting `dynamic: true`. They can extract a varia
 | `mode`         |                                                                                                                                                                                                                               | string     | no       |
 | `device_class` | Device class of the [sensor](https://developers.home-assistant.io/docs/core/entity/sensor#available-device-classes) or [number](https://developers.home-assistant.io/docs/core/entity/number#available-device-classes) entity | string     | no       |
 
-#### Specific options for binary sensors
+#### Binary sensors
 
 | Name           | Description                                                                                                                                                                                                                                  | Type     | Required |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------- |
@@ -154,7 +148,9 @@ Dynamic sensors are created by setting `dynamic: true`. They can extract a varia
 | `payload_off`  |                                                                                                                                                                                                                                              | string   | no       |
 | `device_class` | Device class of the [binary sensor](https://developers.home-assistant.io/docs/core/entity/binary-sensor#available-device-classes), or [switch](https://developers.home-assistant.io/docs/core/entity/switch#available-device-classes) entity | string   | no       |
 
-### Action command examples
+## Examples
+
+### Action commands
 
 #### Backup a folder
 
@@ -172,7 +168,7 @@ name: Execute my script
 icon: mdi:bash
 ```
 
-### Sensor command examples
+### Sensor commands
 
 #### Number of logged in users (single static sensor)
 
