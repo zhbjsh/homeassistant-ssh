@@ -52,13 +52,6 @@ Each device can be configured individually by clicking on its _Configure_ button
 
 There are two kind of commands: [Action commands](#action-commands) and [sensor commands](#sensor-commands). If you have selected a default command set during setup, the included commands will show up in the device configuration window. You can modify them or add new ones for your device.
 
-#### Configuration variables
-
-| Name      | Description                 | Type    | Required | Default                |
-| --------- | --------------------------- | ------- | -------- | ---------------------- |
-| `command` | The command to execute.     | string  | yes      |                        |
-| `timeout` | The timeout of the command. | integer | no       | Device command timeout |
-
 #### Templates
 
 Templates can be used to render commands in the same way as with the [Command Line](https://www.home-assistant.io/integrations/command_line/#usage-of-templating-in-command) integration.
@@ -70,6 +63,13 @@ By writing sensor keys in curly braces you can include the current value of a se
 #### Context
 
 If you put any variable in curly braces that is not the key of a sensor, you have to provide it with a `context` dictionary when executing the command. This is is only possible for action commands and not for sensor commands. If an action requires context, it won't appear as button entity in Home Assistant and can only be executed with the [`run_action`](#service-sshrun_action) service.
+
+#### Configuration variables
+
+| Name      | Description                 | Type    | Required | Default                |
+| --------- | --------------------------- | ------- | -------- | ---------------------- |
+| `command` | The command to execute.     | string  | yes      |                        |
+| `timeout` | The timeout of the command. | integer | no       | Device command timeout |
 
 ### Action commands
 
@@ -85,6 +85,24 @@ When a action command doesn't require [context](#context), it will appear as but
 | `device_class` | The device class of the [button](https://developers.home-assistant.io/docs/core/entity/button#available-device-classes) entity. | string | no                    |                       |
 | `icon`         | The icon of the entity.                                                                                                         | string | no                    |                       |
 
+#### Examples
+
+##### Backup a folder
+
+```yaml
+command: rsync -Aax --log-file='~/backup.log' '~/my_folder' '/mnt/backup/'
+name: Backup my folder
+timeout: 30
+```
+
+##### Execute a script
+
+```yaml
+command: ~/my_script.sh
+name: Execute my script
+icon: mdi:bash
+```
+
 ### Sensor commands
 
 Sensor commands contain a list of one or more [sensors](#sensors) that will update every time the command executes. This happens when the device connects, when the `scan_interval` has passed or when one of the sensors gets polled manually with the [`poll_sensor`](#service-sshpoll_sensor) service.
@@ -96,9 +114,75 @@ Sensor commands contain a list of one or more [sensors](#sensors) that will upda
 | `scan_interval` | The scan interval. If not provided, the command will only execute once every time the device connects. | integer | no       |         |
 | `sensors`       | A list of [sensors](#sensors).                                                                         | list    | yes      |         |
 
+#### Examples
+
+##### Number of logged in users (single static sensor)
+
+```yaml
+command: who --count | awk -F "=" 'NR>1 {{print $2}}'
+interval: 60
+sensors:
+  - name: Logged in users
+  - value_type: int
+  - icon: mdi:account
+```
+
+##### CPU information (multiple static sensors)
+
+```yaml
+command: lscpu | awk -F ":" '/^Architecture|^CPU\(s\)|^Model name|^CPU max|^CPU min/ {{print $2}}'
+sensors:
+  - name: CPU architecture
+  - name: CPU number
+    value_type: int
+  - name: CPU model name
+  - name: CPU MHz max.
+    value_type: float
+  - name: CPU MHz min.
+    value_type: float
+```
+
+##### Files in a folder (dynamic sensor)
+
+```yaml
+command: ls -lp /mnt/backup | awk 'NR>1 && !/\// {{print $5 / 10^6 "|" $NF}}'
+interval: 600
+sensors:
+  - key: file
+    dynamic: true
+    value_type: float
+    unit_of_measurement: MB
+    separator: "|"
+    icon: mdi:file
+    device_class: data_size
+```
+
+##### Systemd services (dynamic sensor with switch commands)
+
+```yaml
+command: systemctl -a | awk '/bluetooth.service|smbd.service/ {{print $4 "|" $1}}'
+interval: 300
+sensors:
+  - key: service
+    dynamic: true
+    value_type: bool
+    command_on: systemctl start {id}
+    command_off: systemctl stop {id}
+    payload_on: running
+    separator: "|"
+```
+
 ### Sensors
 
 Sensors are used to create sensor, binary sensor, switch, number, text and select entities in Home Assistant.
+
+#### Static sensors ([examples](#number-of-logged-in-users-single-static-sensor))
+
+Static sensors are created by default. They can extract a fixed number of values from the command output. There can be multiple static sensors in one sensor command and each line of the command output is used to get the value for one of them. Static sensors must be defined in the same order as they appear in the command output.
+
+#### Dynamic sensors ([examples](#files-in-backup-folder-dynamic-sensor))
+
+Dynamic sensors are created by setting `dynamic: true`. They can extract a variable number of values from the command output. There can only be one dynamic sensor per sensor command. Each line of the command output is used to get value and name of one "child sensor". Values and names must be separated by either one or more spaces or a `separator` defined in the dynamic sensor. All child sensors of a dynamic sensor share the attributes of their "parent" (`value_type`, `unit_of_measurement`, etc.).
 
 #### Configuration variables
 
@@ -161,92 +245,6 @@ With `command_set`/`command_on` & `command_off`: Switch entity.
 | `command_off` | Command to set the sensor value to `false`. | string | no       |         |
 | `payload_on`  |                                             | string | no       |         |
 | `payload_off` |                                             | string | no       |         |
-
-#### Static sensors ([examples](#number-of-logged-in-users-single-static-sensor))
-
-Static sensors are created by default. They can extract a fixed number of values from the command output. There can be multiple static sensors in one sensor command and each line of the command output is used to get the value for one of them. Static sensors must be defined in the same order as they appear in the command output.
-
-#### Dynamic sensors ([examples](#files-in-backup-folder-dynamic-sensor))
-
-Dynamic sensors are created by setting `dynamic: true`. They can extract a variable number of values from the command output. There can only be one dynamic sensor per sensor command. Each line of the command output is used to get value and name of one "child sensor". Values and names must be separated by either one or more spaces or a `separator` defined in the dynamic sensor. All child sensors of a dynamic sensor share the attributes of their "parent" (`value_type`, `unit_of_measurement`, etc.).
-
-## Examples
-
-### Action commands
-
-#### Backup a folder
-
-```yaml
-command: rsync -Aax --log-file='~/backup.log' '~/my_folder' '/mnt/backup/'
-name: Backup my folder
-timeout: 30
-```
-
-#### Execute a script
-
-```yaml
-command: ~/my_script.sh
-name: Execute my script
-icon: mdi:bash
-```
-
-### Sensor commands
-
-#### Number of logged in users (single static sensor)
-
-```yaml
-command: who --count | awk -F "=" 'NR>1 {{print $2}}'
-interval: 60
-sensors:
-  - name: Logged in users
-  - value_type: int
-  - icon: mdi:account
-```
-
-#### CPU information (multiple static sensors)
-
-```yaml
-command: lscpu | awk -F ":" '/^Architecture|^CPU\(s\)|^Model name|^CPU max|^CPU min/ {{print $2}}'
-sensors:
-  - name: CPU architecture
-  - name: CPU number
-    value_type: int
-  - name: CPU model name
-  - name: CPU MHz max.
-    value_type: float
-  - name: CPU MHz min.
-    value_type: float
-```
-
-#### Files in a folder (dynamic sensor)
-
-```yaml
-command: ls -lp /mnt/backup | awk 'NR>1 && !/\// {{print $5 / 10^6 "|" $NF}}'
-interval: 600
-sensors:
-  - key: file
-    dynamic: true
-    value_type: float
-    unit_of_measurement: MB
-    separator: "|"
-    icon: mdi:file
-    device_class: data_size
-```
-
-#### Systemd services (dynamic sensor with switch commands)
-
-```yaml
-command: systemctl -a | awk '/bluetooth.service|smbd.service/ {{print $4 "|" $1}}'
-interval: 300
-sensors:
-  - key: service
-    dynamic: true
-    value_type: bool
-    command_on: systemctl start {id}
-    command_off: systemctl stop {id}
-    payload_on: running
-    separator: "|"
-```
 
 ## Services
 
