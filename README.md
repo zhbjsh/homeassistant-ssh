@@ -20,41 +20,44 @@ This integration allows you to control and monitor devices in Home Assistant by 
 
 You can add a new device for this integration by clicking on the _Add Integration_ button in _Settings_ -> _Devices & Services_.
 
-#### Default command set
+### Options
 
-Select the default command set depending on the operating system of the device. If you choose _None_, no entities besides the _Network_ and _SSH_ sensors will be available initially.
+- Default command set
 
-#### SSH key file
+  Select the default command set depending on the operating system of the device. If you choose _None_, no entities besides the _Network_ and _SSH_ sensors will be available initially.
 
-If you want to use key authentication with the device, enter the path to the key file in the option _SSH key file_. Make sure your Home Assistant user has access to this file.
+- SSH key file
 
-#### SSH host key file
+  If you want to use key authentication with the device, enter the path to the key file in the option _SSH key file_. Make sure your Home Assistant user has access to this file.
 
-If your system doesn't know the host key of the device, enable the option _Add unknown host key to host keys file_ and make sure your Home Assistant user has access to this file. After setup this file will be used to identify the device when connecting to it.
+- SSH host key file
+
+  If your system doesn't know the host key of the device, enable the option _Add unknown host key to host keys file_ and make sure your Home Assistant user has access to this file. After setup this file will be used to identify the device when connecting to it.
 
 ## Device configuration
 
 Each device can be configured individually by clicking on its _Configure_ button in _Settings_ -> _Devices & Services_.
 
-#### Allow to turn the device off
+### Options
 
-After enabling this option, you can use the power button and the [`turn_off`](#service-sshturn_off) service to turn the device off.
+- Allow to turn the device off
 
-#### Update interval
+  After enabling this option, you can use the power button and the [`turn_off`](#service-sshturn_off) service to turn the device off.
 
-The interval in seconds between updates of the device state (shown by the binary sensors _Network_ and _SSH_).
+- Update interval
 
-#### Action commands
+  The interval in seconds between updates of the device state (shown by the binary sensors _Network_ and _SSH_).
 
-Commands used to generate button entities in Home Assistant ([details](#action-commands-examples)).
+### Commands
 
-#### Sensor commands
+There are two kind of commands: [Action commands](#action-commands) and [sensor commands](#sensor-commands). If you have selected a default command set during setup, the included commands will show up in the device configuration window. You can modify them or add new ones for your device.
 
-Commands used to generate sensor, binary sensor and switch entities in Home Assistant ([details](#sensor-commands-examples)).
+#### Configuration variables
 
-## Commands
-
-If you have selected a default command set during setup, the included commands will show up in the device configuration window. You can modify those or add new ones for your device.
+| Name      | Description                 | Type    | Required | Default                |
+| --------- | --------------------------- | ------- | -------- | ---------------------- |
+| `command` | The command to execute.     | string  | yes      |                        |
+| `timeout` | The timeout of the command. | integer | no       | Device command timeout |
 
 #### Templates
 
@@ -62,91 +65,110 @@ Templates can be used to render commands in the same way as with the [Command Li
 
 #### Sensor values
 
-Insert sensor values of the device by writing sensor keys in curly braces.
+By writing sensor keys in curly braces you can include the current value of a sensor in a command. If the value of the sensor is unknown, the integration will try to poll the sensor once before executing the command.
 
 #### Context
 
-If you put a variable in curly braces that is not the key of a sensor, you have to provide it with a `context` dictionary when executing the command. This is is only possible for action commands and not for sensor commands. If a action requires context, it won't appear as button entity in Home Assistant and can only be executed with [`run_action`](#service-sshrun_action).
+If you put any variable in curly braces that is not the key of a sensor, you have to provide it with a `context` dictionary when executing the command. This is is only possible for action commands and not for sensor commands. If an action requires context, it won't appear as button entity in Home Assistant and can only be executed with the [`run_action`](#service-sshrun_action) service.
 
-### Action commands ([examples](#service-command-examples))
+### Action commands
 
+Action commands are used to create button entities in Home Assistant.
 When a action command doesn't require [context](#context), it will appear as button entity in Home Assistant. Action commands with context can be executed with [`run_action`](#service-sshrun_action).
 
-| Name           | Description                                                                                                                | Type    | Required |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------- | ------- | -------- |
-| `command`      | Command to execute                                                                                                         | string  | yes      |
-| `name`         | Name of the action                                                                                                         | string  | no       |
-| `key`          | Key of the action                                                                                                          | string  | no       |
-| `timeout`      | Command timeout                                                                                                            | integer | no       |
-| `device_class` | Device class of the [button](https://developers.home-assistant.io/docs/core/entity/button#available-device-classes) entity | string  | no       |
-| `icon`         | Icon of the entity                                                                                                         | string  | no       |
+#### Configuration variables
 
-### Sensor commands ([examples](#sensor-command-examples))
+| Name           | Description                                                                                                                     | Type   | Required              | Default               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------ | --------------------- | --------------------- |
+| `name`         | The name of the action.                                                                                                         | string | If no `key` provided  |                       |
+| `key`          | The key of the action.                                                                                                          | string | If no `name` provided | Generated from `name` |
+| `device_class` | The device class of the [button](https://developers.home-assistant.io/docs/core/entity/button#available-device-classes) entity. | string | no                    |                       |
+| `icon`         | The icon of the entity.                                                                                                         | string | no                    |                       |
 
-Sensor commands contain a list of one or more sensors that will be updated every time the command executes. This happens when the device connects, when the `scan_interval` has passed or when one of the sensors gets polled manually with [`poll_sensor`](#service-sshpoll_sensor).
+### Sensor commands
 
-| Name            | Description        | Type    | Required |
-| --------------- | ------------------ | ------- | -------- |
-| `command`       | Command to execute | string  | yes      |
-| `timeout`       | Command timeout    | integer | no       |
-| `scan_interval` | Scan interval      | integer | no       |
-| `sensors`       | List of sensors    | list    | yes      |
+Sensor commands contain a list of one or more [sensors](#sensors) that will update every time the command executes. This happens when the device connects, when the `scan_interval` has passed or when one of the sensors gets polled manually with the [`poll_sensor`](#service-sshpoll_sensor) service.
+
+#### Configuration variables
+
+| Name            | Description                                                                                            | Type    | Required | Default |
+| --------------- | ------------------------------------------------------------------------------------------------------ | ------- | -------- | ------- |
+| `scan_interval` | The scan interval. If not provided, the command will only execute once every time the device connects. | integer | no       |         |
+| `sensors`       | A list of [sensors](#sensors).                                                                         | list    | yes      |         |
 
 ### Sensors
 
-If the `value_type` of a sensor is not set to `bool`, it will appear as sensor entity in Home Assistant. Otherwise either a binary sensor or a switch entity will be generated (switches need to have both `on_command` and `off_command`).
+Sensors are used to create sensor, binary sensor, switch, number, text and select entities in Home Assistant.
+
+#### Configuration variables
+
+| Name                  | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Type    | Required              | Default               |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | --------------------- | --------------------- |
+| `type`                | The type of the sensor (can be `text`, `number` or `binary`).                                                                                                                                                                                                                                                                                                                                                                                                 | string  | yes                   |
+| `name`                | The name of the sensor.                                                                                                                                                                                                                                                                                                                                                                                                                                       | string  | If no `key` provided  |                       |
+| `key`                 | The key of the sensor.                                                                                                                                                                                                                                                                                                                                                                                                                                        | string  | If no `name` provided | Generated from `name` |
+| `dynamic`             | Creates a dynamic sensor when set to `true`.                                                                                                                                                                                                                                                                                                                                                                                                                  | boolean | no                    | false                 |
+| `separator`           | Separates the data on each line of the command output (only relevant for dynamic sensors).                                                                                                                                                                                                                                                                                                                                                                    | string  | no                    |                       |
+| `unit_of_measurement` | The unit of the sensor.                                                                                                                                                                                                                                                                                                                                                                                                                                       | string  | no                    |                       |
+| `value_template`      | Template to generate the value from the command output.                                                                                                                                                                                                                                                                                                                                                                                                       | string  | no                    |                       |
+| `command_set`         | Command to set the value of the sensor (will create a text, select, number or switch entity).                                                                                                                                                                                                                                                                                                                                                                 | string  | no                    |                       |
+| `device_class`        | Device class (only relevant for [sensor](https://developers.home-assistant.io/docs/core/entity/sensor#available-device-classes), [binary sensor](https://developers.home-assistant.io/docs/core/entity/binary-sensor#available-device-classes), [number](https://developers.home-assistant.io/docs/core/entity/number#available-device-classes) or [switch](https://developers.home-assistant.io/docs/core/entity/switch#available-device-classes) entities). | string  | no                    |                       |
+| `icon`                | Icon of the entity                                                                                                                                                                                                                                                                                                                                                                                                                                            | string  | no                    |                       |
+
+### Text sensors
+
+Text sensors are created by with `type: text`.
+Without `command_set`: Sensor entity.
+With `command_set`: Text entity.
+With `command_set` and `options`: Select entity.
+
+#### Configuration variables
+
+| Name      | Description                                                                          | Type    | Required | Default |
+| --------- | ------------------------------------------------------------------------------------ | ------- | -------- | ------- |
+| `minimum` | The minimum length of the sensor value (only applies to text entities).              | integer | no       | 0       |
+| `maximum` | The maximum length of the sensor value (only applies to text entities).              | integer | no       | 100     |
+| `pattern` | A regex pattern that the sensor value has to match (only applies to text entities).  | string  | no       |         |
+| `options` | A list of all possible sensor values (will turn a text entity into a select entity). | list    | no       |         |
+| `mode`    | Display mode (only applies to text entities, can be `text` or `password`).           | string  | no       | `text`  |
+
+### Number sensors
+
+Number sensors are created by with `type: number`.
+Without `command_set`: Sensor entity.
+With `command_set`: Number entity.
+
+#### Configuration variables
+
+| Name      | Description                                                                       | Type       | Required | Default |
+| --------- | --------------------------------------------------------------------------------- | ---------- | -------- | ------- |
+| `integer` | Defines the sensor value as integer.                                              | boolean    | no       | `false` |
+| `minimum` | The minimum sensor value (only applies to number entities).                       | int, float | no       | 0.0     |
+| `maximum` | The maximum sensor value (only applies to number entities).                       | int, float | no       | 100.0   |
+| `mode`    | Display mode (only applies to number entities, can be `auto`, `box` or `slider`). | string     | no       | `auto`  |
+
+### Binary sensors
+
+Binary sensors are created by with `type: binary`.
+Without `command_set`/`command_on` & `command_off`: Binary sensor entity.
+With `command_set`/`command_on` & `command_off`: Switch entity.
+
+#### Configuration variables
+
+| Name          | Description                                 | Type   | Required | Default |
+| ------------- | ------------------------------------------- | ------ | -------- | ------- |
+| `command_on`  | Command to set the sensor value to `true`.  | string | no       |         |
+| `command_off` | Command to set the sensor value to `false`. | string | no       |         |
+| `payload_on`  |                                             | string | no       |         |
+| `payload_off` |                                             | string | no       |         |
 
 #### Static sensors ([examples](#number-of-logged-in-users-single-static-sensor))
 
-Static sensors are created by default. They can extract a fixed number of values from the command output. There can be multiple static sensors per sensor command and each line of the command output is used to get the value for one of them. Static sensors must be defined in the same order as they appear in the command output.
+Static sensors are created by default. They can extract a fixed number of values from the command output. There can be multiple static sensors in one sensor command and each line of the command output is used to get the value for one of them. Static sensors must be defined in the same order as they appear in the command output.
 
 #### Dynamic sensors ([examples](#files-in-backup-folder-dynamic-sensor))
 
 Dynamic sensors are created by setting `dynamic: true`. They can extract a variable number of values from the command output. There can only be one dynamic sensor per sensor command. Each line of the command output is used to get value and name of one "child sensor". Values and names must be separated by either one or more spaces or a `separator` defined in the dynamic sensor. All child sensors of a dynamic sensor share the attributes of their "parent" (`value_type`, `unit_of_measurement`, etc.).
-
-| Name                  | Description        | Type    | Required |
-| --------------------- | ------------------ | ------- | -------- |
-| `name`                | Name of the sensor | string  | no       |
-| `key`                 | Key of the sensor  | string  | no       |
-| `dynamic`             |                    | boolean | no       |
-| `separator`           |                    | string  | no       |
-| `unit_of_measurement` | Unit of the sensor | string  | no       |
-| `value_template`      |                    | string  | no       |
-| `command_set`         |                    | string  | no       |
-| `icon`                | Icon of the entity | string  | no       |
-
-#### Text sensors
-
-| Name           | Description                                                                                                                | Type    | Required |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------- | ------- | -------- |
-| `minimum`      |                                                                                                                            | integer | no       |
-| `maximum`      |                                                                                                                            | integer | no       |
-| `pattern`      |                                                                                                                            | string  | no       |
-| `options`      |                                                                                                                            | list    | no       |
-| `mode`         |                                                                                                                            | string  | no       |
-| `device_class` | Device class of the [sensor](https://developers.home-assistant.io/docs/core/entity/sensor#available-device-classes) entity | string  | no       |
-
-#### Number sensors
-
-| Name           | Description                                                                                                                                                                                                                   | Type       | Required |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | -------- |
-| `type`         |                                                                                                                                                                                                                               | `number`   | yes      |
-| `integer`      |                                                                                                                                                                                                                               | boolean    | no       |
-| `minimum`      |                                                                                                                                                                                                                               | int, float | no       |
-| `maximum`      |                                                                                                                                                                                                                               | int, float | no       |
-| `mode`         |                                                                                                                                                                                                                               | string     | no       |
-| `device_class` | Device class of the [sensor](https://developers.home-assistant.io/docs/core/entity/sensor#available-device-classes) or [number](https://developers.home-assistant.io/docs/core/entity/number#available-device-classes) entity | string     | no       |
-
-#### Binary sensors
-
-| Name           | Description                                                                                                                                                                                                                                  | Type     | Required |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------- |
-| `type`         |                                                                                                                                                                                                                                              | `binary` | yes      |
-| `command_on`   |                                                                                                                                                                                                                                              | string   | no       |
-| `command_off`  |                                                                                                                                                                                                                                              | string   | no       |
-| `payload_on`   |                                                                                                                                                                                                                                              | string   | no       |
-| `payload_off`  |                                                                                                                                                                                                                                              | string   | no       |
-| `device_class` | Device class of the [binary sensor](https://developers.home-assistant.io/docs/core/entity/binary-sensor#available-device-classes), or [switch](https://developers.home-assistant.io/docs/core/entity/switch#available-device-classes) entity | string   | no       |
 
 ## Examples
 
