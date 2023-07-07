@@ -109,11 +109,11 @@ Static sensors are created by default. Each static sensor extracts its value fro
 
 ##### Dynamic sensors
 
-Dynamic sensors are created by setting dynamic: true. A dynamic sensor extracts a variable number of values from the command output and creates a “child sensor” for each of them. To be able to use a dynamic sensor, each line of the command output must contain ID, value (and optional name) of a child sensor, separated by either one or more spaces or a separator defined with the sensor (example).
+Dynamic sensors are created by setting `dynamic: true`. A dynamic sensor extracts a variable number of values from the command output and creates a “child sensor” for each of them. To be able to use a dynamic sensor, each line of the command output must contain ID, value (and optional name) of a child sensor, separated by either one or more spaces or a separator defined with the sensor (example).
 
 ##### Controllable sensors
 
-Both static sensors and dynamic sensors can be made controllable by adding command_set to their configuration. This command is executed when the user changes the value of the entity. The new value will be passed to the command as value variable. For binary sensors, command_on and command_off can be used instead of command_set (example).
+Both static sensors and dynamic sensors can be made controllable by adding `command_set` to their configuration. This command is executed when the user changes the value of the entity. The new value will be passed to the command as value variable. For binary sensors, `command_on` and `command_off` can be used instead of command_set (example).
 
 ##### Configuration variables
 
@@ -128,7 +128,7 @@ Both static sensors and dynamic sensors can be made controllable by adding comma
 
 #### Text type
 
-Sensors with type: text appear as sensor (if not controllable), text (without options) or select entities in Home Assistant.
+Sensors with `type: text` appear as sensor (if not controllable), text (without options) or select entities in Home Assistant.
 
 ##### Configuration variables
 
@@ -142,7 +142,7 @@ Sensors with type: text appear as sensor (if not controllable), text (without op
 
 #### Number type
 
-Sensors with type: number appear as sensor (if not controllable) or number entities in Home Assistant.
+Sensors with `type: number` appear as sensor (if not controllable) or number entities in Home Assistant.
 
 ##### Configuration variables
 
@@ -155,7 +155,7 @@ Sensors with type: number appear as sensor (if not controllable) or number entit
 
 #### Binary type
 
-Sensors with type: binary appear as binary sensor (if not controllable) or switch entities in Home Assistant.
+Sensors with `type: binary` appear as binary sensor (if not controllable) or switch entities in Home Assistant.
 
 #### Configuration variables
 
