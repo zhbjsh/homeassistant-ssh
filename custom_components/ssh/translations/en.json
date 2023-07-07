@@ -20,7 +20,7 @@
                     "mac_address": "Mac address"
                 },
                 "description": "Please enter the MAC address of the device",
-                "title": "Mac address"
+                "title": "MAC address"
             },
             "name": {
                 "data": {
@@ -56,11 +56,9 @@
             "init": {
                 "data": {
                     "action_commands": "Action commands",
-                    "allow_turn_off": "Allow to turn the device off by power button and 'turn_off' service",
+                    "allow_turn_off": "Allow to turn the device off",
                     "command_timeout": "Command timeout",
-                    "ping_timeout": "Ping timeout",
                     "sensor_commands": "Sensor commands",
-                    "ssh_timeout": "SSH timeout",
                     "update_interval": "Update interval"
                 }
             }

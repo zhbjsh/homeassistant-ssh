@@ -65,7 +65,7 @@ class SensorCommandCoordinator(DataUpdateCoordinator):
         self.stop: Callable = self.async_add_listener(lambda: None)
 
     async def _async_update_data(self) -> None:
-        if not self.manager.state.is_connected:
+        if not self.manager.state.connected:
             return
         try:
             await self.manager.async_execute_command(self._command)

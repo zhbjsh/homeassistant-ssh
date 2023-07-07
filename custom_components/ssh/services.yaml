@@ -1,6 +1,6 @@
 turn_on:
   name: Turn on
-  description: "Turn the device on."
+  description: Turn the selected devices on.
   target:
     device:
       integration: ssh
@@ -9,7 +9,7 @@ turn_on:
 
 turn_off:
   name: Turn off
-  description: "Turn the device off."
+  description: Turn the selected devices off.
   target:
     device:
       integration: ssh
@@ -18,7 +18,7 @@ turn_off:
 
 execute_command:
   name: Execute command
-  description: "Execute a command on the device. Event: `ssh_command_executed`."
+  description: Execute a command on the selected devices.
   target:
     device:
       integration: ssh
@@ -27,25 +27,27 @@ execute_command:
   fields:
     command:
       name: Command
-      description: Command to execute.
+      description: The command to execute.
       required: true
-      example: "echo 'Hello world'"
       selector:
         text:
     timeout:
       name: Timeout
-      description: Timeout of the command.
+      description: The timeout of the command.
       selector:
         number:
-    context:
-      name: Context
-      description: Variables to format the command.
+          min: 0
+          max: 60
+          unit_of_measurement: "s"
+    variables:
+      name: Variables
+      description: Variables to pass to the command.
       selector:
         object:
 
 run_action:
   name: Run action
-  description: "Run an action on the device."
+  description: Run an action on the selected devices.
   target:
     device:
       integration: ssh
@@ -54,14 +56,13 @@ run_action:
   fields:
     key:
       name: Key
-      description: Key of the action.
+      description: The key of the action command.
       required: true
-      example: "turn_off"
       selector:
         text:
-    context:
-      name: Context
-      description: Variables to format the command.
+    variables:
+      name: Variables
+      description: Variables to pass to the command.
       selector:
         object:
 

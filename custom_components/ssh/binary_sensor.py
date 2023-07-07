@@ -72,7 +72,7 @@ class NetworkEntity(BaseEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
-        return self._manager.state.is_online
+        return self._manager.state.online
 
 
 class SSHEntity(BaseEntity, BinarySensorEntity):
@@ -85,4 +85,4 @@ class SSHEntity(BaseEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
-        return self._manager.state.is_connected
+        return self._manager.state.connected

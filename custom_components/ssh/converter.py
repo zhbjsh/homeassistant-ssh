@@ -42,7 +42,7 @@ from .const import (
     CONF_ACTION_COMMANDS,
     CONF_COMMAND_SET,
     CONF_DYNAMIC,
-    CONF_INTEGER,
+    CONF_FLOAT,
     CONF_KEY,
     CONF_OPTIONS,
     CONF_PATTERN,
@@ -81,19 +81,23 @@ DEFAULT_SENSOR_ATTRIBUTES: dict[str, dict] = {
     SensorKey.HOSTNAME: {CONF_ENABLED: False},
     SensorKey.OS_NAME: {CONF_ENABLED: False},
     SensorKey.OS_VERSION: {CONF_ENABLED: False},
+    SensorKey.OS_ARCHITECTURE: {CONF_ENABLED: False},
     SensorKey.TOTAL_MEMORY: {
         CONF_SUGGESTED_UNIT_OF_MEASUREMENT: "GB",
+        CONF_SUGGESTED_DISPLAY_PRECISION: 3,
         CONF_DEVICE_CLASS: SensorDeviceClass.DATA_SIZE,
         CONF_ICON: "mdi:memory",
         CONF_ENABLED: False,
     },
     SensorKey.FREE_MEMORY: {
         CONF_SUGGESTED_UNIT_OF_MEASUREMENT: "GB",
+        CONF_SUGGESTED_DISPLAY_PRECISION: 3,
         CONF_DEVICE_CLASS: SensorDeviceClass.DATA_SIZE,
         CONF_ICON: "mdi:memory",
     },
     SensorKey.FREE_DISK_SPACE: {
         CONF_SUGGESTED_UNIT_OF_MEASUREMENT: "GB",
+        CONF_SUGGESTED_DISPLAY_PRECISION: 3,
         CONF_DEVICE_CLASS: SensorDeviceClass.DATA_SIZE,
         CONF_ICON: "mdi:harddisk",
     },
@@ -148,6 +152,7 @@ def get_sensor_kwargs(hass: HomeAssistant, data: dict) -> dict:
 def get_text_sensor_config(sensor: TextSensor) -> dict:
     return remove_none_items(
         {
+            CONF_TYPE: "text",
             **get_sensor_config(sensor),
             CONF_MINIMUM: sensor.minimum,
             CONF_MAXIMUM: sensor.maximum,
@@ -172,7 +177,7 @@ def get_number_sensor_config(sensor: NumberSensor) -> dict:
         {
             CONF_TYPE: "number",
             **get_sensor_config(sensor),
-            CONF_INTEGER: sensor.integer is True or None,
+            CONF_FLOAT: sensor.float is True or None,
             CONF_MINIMUM: sensor.minimum,
             CONF_MAXIMUM: sensor.maximum,
         }
@@ -182,7 +187,7 @@ def get_number_sensor_config(sensor: NumberSensor) -> dict:
 def get_number_sensor_kwargs(hass: HomeAssistant, data: dict) -> dict:
     return {
         **get_sensor_kwargs(hass, data),
-        "integer": data.get(CONF_INTEGER, False),
+        "float": data.get(CONF_FLOAT, False),
         "minimum": data.get(CONF_MINIMUM),
         "maximum": data.get(CONF_MAXIMUM),
     }
@@ -256,11 +261,13 @@ def get_sensor_command_config(command: SensorCommand) -> dict:
             **get_command_config(command),
             CONF_SCAN_INTERVAL: command.interval,
             CONF_SENSORS: [
-                get_number_sensor_config(sensor)
+                get_text_sensor_config(sensor)
+                if isinstance(sensor, TextSensor)
+                else get_number_sensor_config(sensor)
                 if isinstance(sensor, NumberSensor)
                 else get_binary_sensor_config(sensor)
                 if isinstance(sensor, BinarySensor)
-                else get_text_sensor_config(sensor)
+                else {"key": "_"}
                 for sensor in command.sensors
             ],
         }
@@ -272,11 +279,13 @@ def get_sensor_command_kwargs(hass: HomeAssistant, data: dict) -> dict:
         **get_command_kwargs(hass, data),
         "interval": data.get(CONF_SCAN_INTERVAL),
         "sensors": [
-            NumberSensor(**get_number_sensor_kwargs(hass, sensor_data))
-            if data.get(CONF_TYPE) == "number"
+            TextSensor(**get_text_sensor_kwargs(hass, sensor_data))
+            if sensor_data.get(CONF_TYPE) == "text"
+            else NumberSensor(**get_number_sensor_kwargs(hass, sensor_data))
+            if sensor_data.get(CONF_TYPE) == "number"
             else BinarySensor(**get_binary_sensor_kwargs(hass, sensor_data))
-            if data.get(CONF_TYPE) == "binary"
-            else TextSensor(**get_text_sensor_kwargs(hass, sensor_data))
+            if sensor_data.get(CONF_TYPE) == "binary"
+            else Sensor(key="_")
             for sensor_data in data[CONF_SENSORS]
         ],
     }

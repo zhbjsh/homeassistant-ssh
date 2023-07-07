@@ -1,6 +1,7 @@
 """The SSH integration."""
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 import logging
 
@@ -19,6 +20,7 @@ from homeassistant.const import (
     CONF_PORT,
     CONF_TIMEOUT,
     CONF_USERNAME,
+    CONF_VARIABLES,
     Platform,
 )
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -32,12 +34,9 @@ from .base_entity import BaseSensorEntity
 from .const import (
     CONF_ALLOW_TURN_OFF,
     CONF_COMMAND_TIMEOUT,
-    CONF_CONTEXT,
     CONF_HOST_KEYS_FILENAME,
     CONF_KEY,
     CONF_KEY_FILENAME,
-    CONF_PING_TIMEOUT,
-    CONF_SSH_TIMEOUT,
     CONF_UPDATE_INTERVAL,
     DOMAIN,
     SERVICE_EXECUTE_COMMAND,
@@ -65,8 +64,8 @@ PLATFORMS: list[Platform] = [
 EXECUTE_COMMAND_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_COMMAND): str,
-        vol.Optional(CONF_TIMEOUT): float,
-        vol.Optional(CONF_CONTEXT): dict,
+        vol.Optional(CONF_TIMEOUT): int,
+        vol.Optional(CONF_VARIABLES): dict,
         vol.Optional(ATTR_DEVICE_ID): list,
         vol.Optional(ATTR_ENTITY_ID): list,
     }
@@ -75,7 +74,7 @@ EXECUTE_COMMAND_SCHEMA = vol.Schema(
 RUN_ACTION_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_KEY): str,
-        vol.Optional(CONF_CONTEXT): dict,
+        vol.Optional(CONF_VARIABLES): dict,
         vol.Optional(ATTR_DEVICE_ID): list,
         vol.Optional(ATTR_ENTITY_ID): list,
     }
@@ -110,11 +109,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         password=data.get(CONF_PASSWORD),
         key_filename=data.get(CONF_KEY_FILENAME),
         host_keys_filename=data.get(CONF_HOST_KEYS_FILENAME),
-        ssh_timeout=options[CONF_SSH_TIMEOUT],
-        ping_timeout=options[CONF_PING_TIMEOUT],
+        allow_turn_off=options[CONF_ALLOW_TURN_OFF],
         command_timeout=options[CONF_COMMAND_TIMEOUT],
         collection=get_collection(hass, options),
-        allow_turn_off=options[CONF_ALLOW_TURN_OFF],
         logger=_LOGGER,
     )
 
@@ -136,45 +133,69 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def turn_on(call: ServiceCall):
-        for entry_id in await async_extract_config_entry_ids(hass, call):
-            entry_data: EntryData = hass.data[DOMAIN][entry_id]
-            await entry_data.manager.async_turn_on()
+        async def task(manager: SSHManager):
+            await manager.async_turn_on()
+
+        await asyncio.wait(
+            [
+                task(hass.data[DOMAIN][entry_id].manager)
+                for entry_id in await async_extract_config_entry_ids(hass, call)
+            ]
+        )
 
     async def turn_off(call: ServiceCall):
-        for entry_id in await async_extract_config_entry_ids(hass, call):
-            entry_data: EntryData = hass.data[DOMAIN][entry_id]
+        async def task(manager: SSHManager):
             try:
-                await entry_data.manager.async_turn_off()
+                await manager.async_turn_off()
             except CommandError:
                 pass
+
+        await asyncio.wait(
+            [
+                task(hass.data[DOMAIN][entry_id].manager)
+                for entry_id in await async_extract_config_entry_ids(hass, call)
+            ]
+        )
 
     async def execute_command(call: ServiceCall):
         command_string = call.data[CONF_COMMAND]
         timeout = call.data.get(CONF_TIMEOUT)
-        context = call.data.get(CONF_CONTEXT)
+        variables = call.data.get(CONF_VARIABLES)
         command = Command(
             command_string,
             timeout=timeout,
             renderer=get_command_renderer(hass),
         )
 
-        for entry_id in await async_extract_config_entry_ids(hass, call):
-            entry_data: EntryData = hass.data[DOMAIN][entry_id]
+        async def task(manager: SSHManager):
             try:
-                await entry_data.manager.async_execute_command(command, context)
+                await manager.async_execute_command(command, variables)
             except CommandError:
                 pass
+
+        await asyncio.wait(
+            [
+                task(hass.data[DOMAIN][entry_id].manager)
+                for entry_id in await async_extract_config_entry_ids(hass, call)
+            ]
+        )
 
     async def run_action(call: ServiceCall):
         action_key = call.data[CONF_KEY]
-        context = call.data.get(CONF_CONTEXT)
+        variables = call.data.get(CONF_VARIABLES)
 
-        for entry_id in await async_extract_config_entry_ids(hass, call):
-            entry_data: EntryData = hass.data[DOMAIN][entry_id]
+        async def task(manager: SSHManager):
             try:
-                await entry_data.manager.async_run_action(action_key, context)
+                await manager.async_run_action(action_key, variables)
             except CommandError:
                 pass
+
+        await asyncio.wait(
+            [
+                task(hass.data[DOMAIN][entry_id].manager)
+                for entry_id in await async_extract_config_entry_ids(hass, call)
+            ]
+        )
 
     async def poll_sensor(call: ServiceCall):
         sensor_entities = [
@@ -193,10 +214,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry_id = entity.coordinator.config_entry.entry_id
             entities_by_entry_id[entry_id].append(entity)
 
-        for entry_id, entities in entities_by_entry_id.items():
-            entry_data: EntryData = hass.data[DOMAIN][entry_id]
+        async def task(manager: SSHManager, entities: list[BaseSensorEntity]):
             sensor_keys = [entity.key for entity in entities]
-            await entry_data.manager.async_poll_sensors(sensor_keys)
+            await manager.async_poll_sensors(sensor_keys)
+
+        await asyncio.wait(
+            [
+                task(hass.data[DOMAIN][entry_id].manager, entities)
+                for entry_id, entities in entities_by_entry_id.items()
+            ]
+        )
 
     hass.services.async_register(
         DOMAIN,

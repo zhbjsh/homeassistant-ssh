@@ -1,12 +1,24 @@
 """Config flow for SSH integration."""
 from __future__ import annotations
 
+from collections.abc import Mapping
 import logging
 import re
-from collections.abc import Mapping
 from typing import Any
 
+from ssh_terminal_manager import (
+    DEFAULT_ADD_HOST_KEYS,
+    DEFAULT_PORT,
+    Collection,
+    OfflineError,
+    SSHAuthError,
+    SSHConnectError,
+    SSHHostKeyUnknownError,
+    SSHManager,
+    default_collections,
+)
 import voluptuous as vol
+
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -44,17 +56,6 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
 )
 from homeassistant.util import slugify
-from ssh_terminal_manager import (
-    DEFAULT_ADD_HOST_KEYS,
-    DEFAULT_PORT,
-    Collection,
-    OfflineError,
-    SSHAuthError,
-    SSHConnectError,
-    SSHHostKeyUnknownError,
-    SSHManager,
-    default_collections,
-)
 
 from .const import (
     CONF_ACTION_COMMANDS,
@@ -64,17 +65,15 @@ from .const import (
     CONF_COMMAND_TIMEOUT,
     CONF_DEFAULT_COMMANDS,
     CONF_DYNAMIC,
+    CONF_FLOAT,
     CONF_HOST_KEYS_FILENAME,
-    CONF_INTEGER,
     CONF_KEY,
     CONF_KEY_FILENAME,
     CONF_OPTIONS,
     CONF_PATTERN,
-    CONF_PING_TIMEOUT,
     CONF_SENSOR_COMMANDS,
     CONF_SENSORS,
     CONF_SEPARATOR,
-    CONF_SSH_TIMEOUT,
     CONF_SUGGESTED_DISPLAY_PRECISION,
     CONF_SUGGESTED_UNIT_OF_MEASUREMENT,
     CONF_UPDATE_INTERVAL,
@@ -89,7 +88,7 @@ from .converter import (
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_UPDATE_INTERVAL = 30
-DEFAULT_HOST_KEYS_FILENAME = ".ssh_known_hosts"
+DEFAULT_HOST_KEYS_FILENAME = ".ssh_host_keys"
 
 SENSOR_SCHEMA = vol.Schema(
     {
@@ -101,28 +100,31 @@ SENSOR_SCHEMA = vol.Schema(
         vol.Optional(CONF_UNIT_OF_MEASUREMENT): str,
         vol.Optional(CONF_VALUE_TEMPLATE): str,
         vol.Optional(CONF_COMMAND_SET): str,
+        vol.Optional(CONF_SUGGESTED_UNIT_OF_MEASUREMENT): str,
+        vol.Optional(CONF_SUGGESTED_DISPLAY_PRECISION): int,
+        vol.Optional(CONF_MODE): str,
         vol.Optional(CONF_DEVICE_CLASS): str,
         vol.Optional(CONF_ICON): str,
+        vol.Optional(CONF_ENABLED): bool,
     }
 )
 
 TEXT_SENSOR_SCHEMA = SENSOR_SCHEMA.extend(
     {
+        vol.Required(CONF_TYPE): "text",
         vol.Optional(CONF_MINIMUM): int,
         vol.Optional(CONF_MAXIMUM): int,
         vol.Optional(CONF_PATTERN): str,
         vol.Optional(CONF_OPTIONS): list,
-        vol.Optional(CONF_MODE): str,
     }
 )
 
 NUMBER_SENSOR_SCHEMA = SENSOR_SCHEMA.extend(
     {
         vol.Required(CONF_TYPE): "number",
-        vol.Optional(CONF_INTEGER): bool,
+        vol.Optional(CONF_FLOAT): bool,
         vol.Optional(CONF_MINIMUM): vol.Coerce(float),
         vol.Optional(CONF_MAXIMUM): vol.Coerce(float),
-        vol.Optional(CONF_MODE): str,
     }
 )
 
@@ -149,6 +151,7 @@ ACTION_COMMAND_SCHEMA = COMMAND_SCHEMA.extend(
         vol.Optional(CONF_KEY): str,
         vol.Optional(CONF_DEVICE_CLASS): str,
         vol.Optional(CONF_ICON): str,
+        vol.Optional(CONF_ENABLED): bool,
     }
 )
 
@@ -255,8 +258,6 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     options = {
         CONF_ALLOW_TURN_OFF: manager.allow_turn_off,
         CONF_UPDATE_INTERVAL: DEFAULT_UPDATE_INTERVAL,
-        CONF_PING_TIMEOUT: manager.ping_timeout,
-        CONF_SSH_TIMEOUT: manager.ssh_timeout,
         CONF_COMMAND_TIMEOUT: manager.command_timeout,
         CONF_ACTION_COMMANDS: [
             get_action_command_config(command) for command in manager.action_commands
@@ -318,14 +319,6 @@ class OptionsFlow(config_entries.OptionsFlow):
                     vol.Required(
                         CONF_UPDATE_INTERVAL,
                         default=self._data[CONF_UPDATE_INTERVAL],
-                    ): int,
-                    vol.Required(
-                        CONF_PING_TIMEOUT,
-                        default=self._data[CONF_PING_TIMEOUT],
-                    ): int,
-                    vol.Required(
-                        CONF_SSH_TIMEOUT,
-                        default=self._data[CONF_SSH_TIMEOUT],
                     ): int,
                     vol.Required(
                         CONF_COMMAND_TIMEOUT,

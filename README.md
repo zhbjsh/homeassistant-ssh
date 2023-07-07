@@ -4,7 +4,7 @@ This integration allows you to control and monitor devices in Home Assistant by 
 
 ### Features
 
-- Authentication by username/password or SSH key file.
+- Authentication with username/password or SSH key file.
 - Multiple devices can be connected at the same time.
 - Detection of the devices with ping when they are not connected.
 - Setup via user interface, no settings in configuration.yaml necessary.
@@ -15,6 +15,12 @@ This integration allows you to control and monitor devices in Home Assistant by 
 - Dynamic sensors can dynamically add/remove sensor entities in Home Assistant depending on the command output.
 - Sensors can be polled manually using a service.
 - Devices can be turned on by Wake on LAN if supported by the hardware.
+
+## Installation
+
+### HACS
+
+### Copy files
 
 ## Device setup
 
@@ -85,24 +91,6 @@ When a action command doesn't require [context](#context), it will appear as but
 | `device_class` | The device class of the [button](https://developers.home-assistant.io/docs/core/entity/button#available-device-classes) entity. | string | no                    |                       |
 | `icon`         | The icon of the entity.                                                                                                         | string | no                    |                       |
 
-#### Examples
-
-##### Backup a folder
-
-```yaml
-command: rsync -Aax --log-file='~/backup.log' '~/my_folder' '/mnt/backup/'
-name: Backup my folder
-timeout: 30
-```
-
-##### Execute a script
-
-```yaml
-command: ~/my_script.sh
-name: Execute my script
-icon: mdi:bash
-```
-
 ### Sensor commands
 
 Sensor commands contain a list of one or more [sensors](#sensors) that will update every time the command executes. This happens when the device connects, when the `scan_interval` has passed or when one of the sensors gets polled manually with the [`poll_sensor`](#service-sshpoll_sensor) service.
@@ -113,64 +101,6 @@ Sensor commands contain a list of one or more [sensors](#sensors) that will upda
 | --------------- | ------------------------------------------------------------------------------------------------------ | ------- | -------- | ------- |
 | `scan_interval` | The scan interval. If not provided, the command will only execute once every time the device connects. | integer | no       |         |
 | `sensors`       | A list of [sensors](#sensors).                                                                         | list    | yes      |         |
-
-#### Examples
-
-##### Number of logged in users (single static sensor)
-
-```yaml
-command: who --count | awk -F "=" 'NR>1 {{print $2}}'
-interval: 60
-sensors:
-  - name: Logged in users
-  - value_type: int
-  - icon: mdi:account
-```
-
-##### CPU information (multiple static sensors)
-
-```yaml
-command: lscpu | awk -F ":" '/^Architecture|^CPU\(s\)|^Model name|^CPU max|^CPU min/ {{print $2}}'
-sensors:
-  - name: CPU architecture
-  - name: CPU number
-    value_type: int
-  - name: CPU model name
-  - name: CPU MHz max.
-    value_type: float
-  - name: CPU MHz min.
-    value_type: float
-```
-
-##### Files in a folder (dynamic sensor)
-
-```yaml
-command: ls -lp /mnt/backup | awk 'NR>1 && !/\// {{print $5 / 10^6 "|" $NF}}'
-interval: 600
-sensors:
-  - key: file
-    dynamic: true
-    value_type: float
-    unit_of_measurement: MB
-    separator: "|"
-    icon: mdi:file
-    device_class: data_size
-```
-
-##### Systemd services (dynamic sensor with switch commands)
-
-```yaml
-command: systemctl -a | awk '/bluetooth.service|smbd.service/ {{print $4 "|" $1}}'
-interval: 300
-sensors:
-  - key: service
-    dynamic: true
-    value_type: bool
-    command_on: systemctl start {id}
-    command_off: systemctl stop {id}
-    payload_on: running
-    separator: "|"
-```
 
 ### Sensors
 
@@ -278,3 +208,81 @@ Run an action command on the device.
 ### `ssh.poll_sensor`
 
 Poll a sensor on the device.
+
+## Examples
+
+### Action commands
+
+#### Backup a folder
+
+```yaml
+command: rsync -Aax --log-file='~/backup.log' '~/my_folder' '/mnt/backup/'
+name: Backup my folder
+timeout: 30
+```
+
+### Execute a script
+
+```yaml
+command: ~/my_script.sh
+name: Execute my script
+icon: mdi:bash
+```
+
+### Sensor commands
+
+#### Number of logged in users (single static sensor)
+
+```yaml
+command: who --count | awk -F "=" 'NR>1 {{print $2}}'
+interval: 60
+sensors:
+  - name: Logged in users
+  - value_type: int
+  - icon: mdi:account
+```
+
+#### CPU information (multiple static sensors)
+
+```yaml
+command: lscpu | awk -F ":" '/^Architecture|^CPU\(s\)|^Model name|^CPU max|^CPU min/ {{print $2}}'
+sensors:
+  - name: CPU architecture
+  - name: CPU number
+    value_type: int
+  - name: CPU model name
+  - name: CPU MHz max.
+    value_type: float
+  - name: CPU MHz min.
+    value_type: float
+```
+
+#### Files in a folder (dynamic sensor)
+
+```yaml
+command: ls -lp /mnt/backup | awk 'NR>1 && !/\// {{print $5 / 10^6 "|" $NF}}'
+interval: 600
+sensors:
+  - key: file
+    dynamic: true
+    value_type: float
+    unit_of_measurement: MB
+    separator: "|"
+    icon: mdi:file
+    device_class: data_size
+```
+
+#### Systemd services (dynamic sensor with switch commands)
+
+```yaml
+command: systemctl -a | awk '/bluetooth.service|smbd.service/ {{print $4 "|" $1}}'
+interval: 300
+sensors:
+  - key: service
+    dynamic: true
+    value_type: bool
+    command_on: systemctl start {id}
+    command_off: systemctl stop {id}
+    payload_on: running
+    separator: "|"
+```

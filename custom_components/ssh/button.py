@@ -24,7 +24,7 @@ async def async_setup_entry(
     entities = [PowerEntity(entry_data.state_coordinator, config_entry)]
 
     for command in entry_data.manager.action_commands:
-        if command.get_context_keys(entry_data.manager):
+        if command.get_variable_keys(entry_data.manager):
             continue
         if command.key == ActionKey.TURN_OFF:
             continue
@@ -50,11 +50,11 @@ class PowerEntity(BaseEntity, ButtonEntity):
 
     @property
     def available(self) -> bool:
-        if not self._manager.state.is_online and self._manager.mac_address:
+        if not self._manager.state.online and self._manager.mac_address:
             return True
 
         if (
-            self._manager.state.is_connected
+            self._manager.state.connected
             and self._manager.allow_turn_off
             and ActionKey.TURN_OFF in self._manager.action_commands_by_key
         ):
@@ -63,8 +63,8 @@ class PowerEntity(BaseEntity, ButtonEntity):
         return False
 
     async def async_press(self) -> None:
-        if not self._manager.state.is_online:
+        if not self._manager.state.online:
             await self._manager.async_turn_on()
 
-        elif self._manager.state.is_connected:
+        elif self._manager.state.connected:
             await self._manager.async_turn_off()

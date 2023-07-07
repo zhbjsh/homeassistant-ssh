@@ -96,7 +96,7 @@ class BaseActionEntity(BaseEntity):
 
     @property
     def available(self) -> bool:
-        return self._manager.state.is_connected
+        return self._manager.state.connected
 
 
 class BaseSensorEntity(BaseEntity):
@@ -123,7 +123,7 @@ class BaseSensorEntity(BaseEntity):
 
     @property
     def available(self) -> bool:
-        return self._manager.state.is_connected
+        return self._manager.state.connected
 
     def _handle_sensor_update(self, sensor: Sensor) -> None:
         self.schedule_update_ha_state()
