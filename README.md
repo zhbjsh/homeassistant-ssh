@@ -26,9 +26,9 @@ Login with username and password is supported as well as authentication with a k
 
 ##### Host key
 
-When connecting to the device for the first time, the integration will look for its key in the local known_hosts file. If the key is unknown, you can choose to save it to a file by enabling “Add unknown host key to host keys file”. The host keys file will then be used to identify the device when connecting to it. Make sure the Home Assistant user has access to it.
+When connecting to the device for the first time, the integration will look for its key in the local known_hosts file. If the key is unknown, you can choose to save it to a file by enabling "Add unknown host key to host keys file". The host keys file will then be used to identify the device when connecting to it. Make sure the Home Assistant user has access to it.
 
-##### Default Commands
+##### Default commands
 
 Choose the matching operating system if you want to have a set of default commands available for the device initially (recommended). The default commands can be modified or deleted later.
 
@@ -109,7 +109,7 @@ Static sensors are created by default. Each static sensor extracts its value fro
 
 ##### Dynamic sensors
 
-Dynamic sensors are created by setting `dynamic: true`. A dynamic sensor extracts a variable number of values from the command output and creates a “child sensor” for each of them. To be able to use a dynamic sensor, each line of the command output must contain ID, value (and optional name) of a child sensor, separated by either one or more spaces or a separator defined with the sensor (example).
+Dynamic sensors are created by setting `dynamic: true`. A dynamic sensor extracts a variable number of values from the command output and creates a "child sensor" for each of them. To be able to use a dynamic sensor, each line of the command output must contain ID, value (and optional name) of a child sensor, separated by either one or more spaces or a separator defined with the sensor (example).
 
 ##### Controllable sensors
 
@@ -179,7 +179,7 @@ icon: mdi:bash
 ##### Action command with template
 
 ```yaml
-command: echo "The weather today is {{ states("weather.forecast_home") }}" | mail -s "Weather forecast" me@example.com
+command: echo "Today will be {{ states("weather.forecast_home") }}" | mail -s "Weather" me@example.com
 name: Send weather forecast
 ```
 
@@ -205,10 +205,10 @@ sensors:
 
 ```yaml
 command: /sys/class/net/{interface}/device/power/wakeup
-  sensors:
-    - type: binary
-      name: Wake on LAN
-      payload_on: enabled
+sensors:
+  - type: binary
+    name: Wake on LAN
+    payload_on: enabled
 ```
 
 ##### Sensor command with value template (static sensor)
