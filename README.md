@@ -157,7 +157,7 @@ Sensors with `type: number` appear as sensor (if not controllable) or number ent
 
 Sensors with `type: binary` appear as binary sensor (if not controllable) or switch entities in Home Assistant.
 
-#### Configuration variables
+##### Configuration variables
 
 | Name          | Description                                                                       | Type   | Required | Default |
 | ------------- | --------------------------------------------------------------------------------- | ------ | -------- | ------- |
