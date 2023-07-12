@@ -238,8 +238,11 @@ command: cat app.conf | awk -F "=" '/^log_level/ {{print $2}}'
 sensors:
   - type: text
     name: Log level
-    options: - warning - info - debug
     command_set: sed -i "s|^log_level=.\*|log_level={value}|" app.conf
+    options:
+      - warning
+      - info
+      - debug
 ```
 
 ##### Sensor command (dynamic sensor)

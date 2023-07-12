@@ -1,11 +1,12 @@
 """Config flow for SSH integration."""
 from __future__ import annotations
 
-from collections.abc import Mapping
 import logging
 import re
+from collections.abc import Mapping
 from typing import Any
 
+import voluptuous as vol
 from ssh_terminal_manager import (
     DEFAULT_ADD_HOST_KEYS,
     DEFAULT_PORT,
@@ -17,7 +18,6 @@ from ssh_terminal_manager import (
     SSHManager,
     default_collections,
 )
-import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
@@ -88,7 +88,7 @@ from .converter import (
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_UPDATE_INTERVAL = 30
-DEFAULT_HOST_KEYS_FILENAME = ".ssh_host_keys"
+DEFAULT_HOST_KEYS_FILENAME = "known_hosts"
 
 SENSOR_SCHEMA = vol.Schema(
     {
@@ -271,8 +271,6 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
 
 class ListSelector(ObjectSelector):
-    """Selector for a list."""
-
     def __init__(
         self, schema: vol.Schema, config: Mapping[str, Any] | None = None
     ) -> None:
@@ -504,7 +502,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_reauth(self, user_input: Mapping[str, Any]) -> FlowResult:
-        """Perform reauth upon a SSH authentication error."""
+        """Handle the reauth step."""
         self._reauth_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
         )
@@ -521,8 +519,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class NameExistsError(Exception):
-    """Error to indicate name exists already."""
+    """Error to indicate that the name already exists."""
 
 
 class MACAddressInvalidError(Exception):
-    """Error to indicate MAC address is invalid."""
+    """Error to indicate that the MAC address is invalid."""

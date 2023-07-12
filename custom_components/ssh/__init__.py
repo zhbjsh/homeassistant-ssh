@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
-from ssh_terminal_manager import Command, CommandError, SSHManager
 import voluptuous as vol
+from ssh_terminal_manager import Command, CommandError, SSHManager
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -83,14 +83,12 @@ RUN_ACTION_SCHEMA = vol.Schema(
 
 @dataclass
 class EntryData:
-    """The EntryData class."""
-
     manager: SSHManager
     state_coordinator: StateCoordinator
     command_coordinators: list[SensorCommandCoordinator]
 
 
-async def _config_entry_listener(hass: HomeAssistant, entry: ConfigEntry):
+async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)
 
@@ -128,31 +126,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         manager, state_coordinator, command_coordinators
     )
 
-    entry.async_on_unload(entry.add_update_listener(_config_entry_listener))
+    entry.async_on_unload(entry.add_update_listener(update_listener))
     await state_coordinator.async_config_entry_first_refresh()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def turn_on(call: ServiceCall):
-        async def task(manager: SSHManager):
-            await manager.async_turn_on()
+        async def func(entry_id: str):
+            entry_data: EntryData = hass.data[DOMAIN][entry_id]
+            await entry_data.manager.async_turn_on()
 
         await asyncio.wait(
             [
-                task(hass.data[DOMAIN][entry_id].manager)
+                func(entry_id)
                 for entry_id in await async_extract_config_entry_ids(hass, call)
             ]
         )
 
     async def turn_off(call: ServiceCall):
-        async def task(manager: SSHManager):
+        async def func(entry_id: str):
+            entry_data: EntryData = hass.data[DOMAIN][entry_id]
             try:
-                await manager.async_turn_off()
+                await entry_data.manager.async_turn_off()
             except CommandError:
                 pass
 
         await asyncio.wait(
             [
-                task(hass.data[DOMAIN][entry_id].manager)
+                func(entry_id)
                 for entry_id in await async_extract_config_entry_ids(hass, call)
             ]
         )
@@ -167,15 +167,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             renderer=get_command_renderer(hass),
         )
 
-        async def task(manager: SSHManager):
+        async def func(entry_id: str):
+            entry_data: EntryData = hass.data[DOMAIN][entry_id]
             try:
-                await manager.async_execute_command(command, variables)
+                await entry_data.manager.async_execute_command(command, variables)
             except CommandError:
                 pass
 
         await asyncio.wait(
             [
-                task(hass.data[DOMAIN][entry_id].manager)
+                func(entry_id)
                 for entry_id in await async_extract_config_entry_ids(hass, call)
             ]
         )
@@ -184,15 +185,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         action_key = call.data[CONF_KEY]
         variables = call.data.get(CONF_VARIABLES)
 
-        async def task(manager: SSHManager):
+        async def func(entry_id: str):
+            entry_data: EntryData = hass.data[DOMAIN][entry_id]
             try:
-                await manager.async_run_action(action_key, variables)
+                await entry_data.manager.async_run_action(action_key, variables)
             except CommandError:
                 pass
 
         await asyncio.wait(
             [
-                task(hass.data[DOMAIN][entry_id].manager)
+                func(entry_id)
                 for entry_id in await async_extract_config_entry_ids(hass, call)
             ]
         )
@@ -214,13 +216,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry_id = entity.coordinator.config_entry.entry_id
             entities_by_entry_id[entry_id].append(entity)
 
-        async def task(manager: SSHManager, entities: list[BaseSensorEntity]):
+        async def func(entry_id: str, entities: list[BaseSensorEntity]):
+            entry_data: EntryData = hass.data[DOMAIN][entry_id]
             sensor_keys = [entity.key for entity in entities]
-            await manager.async_poll_sensors(sensor_keys)
+            await entry_data.manager.async_poll_sensors(sensor_keys)
 
         await asyncio.wait(
             [
-                task(hass.data[DOMAIN][entry_id].manager, entities)
+                func(entry_id, entities)
                 for entry_id, entities in entities_by_entry_id.items()
             ]
         )

@@ -75,7 +75,7 @@ DEFAULT_ACTION_ATTRIBUTES: dict[str, dict] = {
 
 DEFAULT_SENSOR_ATTRIBUTES: dict[str, dict] = {
     SensorKey.MAC_ADDRESS: {CONF_ENABLED: False},
-    SensorKey.WOL_SUPPORT: {CONF_ENABLED: False},
+    SensorKey.WAKE_ON_LAN: {CONF_ENABLED: False},
     SensorKey.INTERFACE: {CONF_ENABLED: False},
     SensorKey.MACHINE_TYPE: {CONF_ENABLED: False},
     SensorKey.HOSTNAME: {CONF_ENABLED: False},
@@ -101,10 +101,9 @@ DEFAULT_SENSOR_ATTRIBUTES: dict[str, dict] = {
         CONF_DEVICE_CLASS: SensorDeviceClass.DATA_SIZE,
         CONF_ICON: "mdi:harddisk",
     },
-    SensorKey.TEMPERATURE: {
-        CONF_DEVICE_CLASS: SensorDeviceClass.TEMPERATURE,
-    },
+    SensorKey.TEMPERATURE: {CONF_DEVICE_CLASS: SensorDeviceClass.TEMPERATURE},
     SensorKey.CPU_LOAD: {CONF_ICON: "mdi:server"},
+    SensorKey.PROCESSES: {CONF_ICON: "mdi:cog-box"},
 }
 
 

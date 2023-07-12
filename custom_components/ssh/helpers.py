@@ -16,8 +16,6 @@ if TYPE_CHECKING:
 
 
 def get_command_renderer(hass: HomeAssistant) -> Callable:
-    """Get command renderer."""
-
     def renderer(command_string):
         template = Template(command_string, hass)
         return template.render(parse_result=False)
@@ -26,8 +24,6 @@ def get_command_renderer(hass: HomeAssistant) -> Callable:
 
 
 def get_value_renderer(hass: HomeAssistant, value_template: str) -> Callable:
-    """Get value renderer."""
-
     def renderer(value: str):
         template = Template(value_template, hass)
         return template.render(variables={"value": value}, parse_result=False)
@@ -42,8 +38,6 @@ def get_child_added_listener(
     config_entry: ConfigEntry,
     cls: type[BaseSensorEntity],
 ) -> Callable:
-    """Get child added listener."""
-
     def listener(parent: Sensor, child: Sensor):
         entity = next(
             (
@@ -75,8 +69,6 @@ def get_child_removed_listener(
     state_coordinator: StateCoordinator,
     cls: type[BaseSensorEntity],
 ) -> Callable:
-    """Get child removed listener."""
-
     def listener(parent: Sensor, child: Sensor):
         entity = next(
             (
