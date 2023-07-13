@@ -132,18 +132,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def turn_on(call: ServiceCall):
+        entry_ids = await async_extract_config_entry_ids(hass, call)
+
         async def func(entry_id: str):
             entry_data: EntryData = hass.data[DOMAIN][entry_id]
             await entry_data.manager.async_turn_on()
 
-        await asyncio.wait(
-            [
-                func(entry_id)
-                for entry_id in await async_extract_config_entry_ids(hass, call)
-            ]
-        )
+        await asyncio.gather(*(func(entry_id) for entry_id in entry_ids))
 
     async def turn_off(call: ServiceCall):
+        entry_ids = await async_extract_config_entry_ids(hass, call)
+
         async def func(entry_id: str):
             entry_data: EntryData = hass.data[DOMAIN][entry_id]
             try:
@@ -151,14 +150,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             except CommandError:
                 pass
 
-        await asyncio.wait(
-            [
-                func(entry_id)
-                for entry_id in await async_extract_config_entry_ids(hass, call)
-            ]
-        )
+        await asyncio.gather(*(func(entry_id) for entry_id in entry_ids))
 
     async def execute_command(call: ServiceCall):
+        entry_ids = await async_extract_config_entry_ids(hass, call)
         command_string = call.data[CONF_COMMAND]
         timeout = call.data.get(CONF_TIMEOUT)
         variables = call.data.get(CONF_VARIABLES)
@@ -175,14 +170,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             except CommandError:
                 pass
 
-        await asyncio.wait(
-            [
-                func(entry_id)
-                for entry_id in await async_extract_config_entry_ids(hass, call)
-            ]
-        )
+        await asyncio.gather(*(func(entry_id) for entry_id in entry_ids))
 
     async def run_action(call: ServiceCall):
+        entry_ids = await async_extract_config_entry_ids(hass, call)
         action_key = call.data[CONF_KEY]
         variables = call.data.get(CONF_VARIABLES)
 
@@ -193,12 +184,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             except CommandError:
                 pass
 
-        await asyncio.wait(
-            [
-                func(entry_id)
-                for entry_id in await async_extract_config_entry_ids(hass, call)
-            ]
-        )
+        await asyncio.gather(*(func(entry_id) for entry_id in entry_ids))
 
     async def poll_sensor(call: ServiceCall):
         sensor_entities = [
@@ -222,11 +208,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             sensor_keys = [entity.key for entity in entities]
             await entry_data.manager.async_poll_sensors(sensor_keys)
 
-        await asyncio.wait(
-            [
+        await asyncio.gather(
+            *(
                 func(entry_id, entities)
                 for entry_id, entities in entities_by_entry_id.items()
-            ]
+            )
         )
 
     hass.services.async_register(

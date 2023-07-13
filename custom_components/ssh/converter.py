@@ -74,9 +74,9 @@ DEFAULT_ACTION_ATTRIBUTES: dict[str, dict] = {
 }
 
 DEFAULT_SENSOR_ATTRIBUTES: dict[str, dict] = {
+    SensorKey.NETWORK_INTERFACE: {CONF_ICON: "mdi:wan"},
     SensorKey.MAC_ADDRESS: {CONF_ENABLED: False},
     SensorKey.WAKE_ON_LAN: {CONF_ENABLED: False},
-    SensorKey.INTERFACE: {CONF_ENABLED: False},
     SensorKey.MACHINE_TYPE: {CONF_ENABLED: False},
     SensorKey.HOSTNAME: {CONF_ENABLED: False},
     SensorKey.OS_NAME: {CONF_ENABLED: False},

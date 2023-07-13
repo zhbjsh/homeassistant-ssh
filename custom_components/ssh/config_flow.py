@@ -198,7 +198,7 @@ async def validate_name(hass: HomeAssistant, name: str):
 
 def validate_mac_address(mac_address: str):
     """Validate the mac address has the correct format."""
-    mac_address = mac_address.strip()
+    mac_address = mac_address.strip().lower()
 
     pattern = (
         "^([0-9A-Fa-f]{2}[:-])"

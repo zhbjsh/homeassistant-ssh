@@ -64,7 +64,7 @@ class Entity(BaseSensorEntity, BinarySensorEntity):
 
 class NetworkEntity(BaseEntity, BinarySensorEntity):
     _entity_id_format = ENTITY_ID_FORMAT
-    _attr_name = "Network"
+    _attr_name = "Network Status"
 
     @property
     def device_class(self) -> BinarySensorDeviceClass:
@@ -77,7 +77,7 @@ class NetworkEntity(BaseEntity, BinarySensorEntity):
 
 class SSHEntity(BaseEntity, BinarySensorEntity):
     _entity_id_format = ENTITY_ID_FORMAT
-    _attr_name = "SSH"
+    _attr_name = "SSH Status"
 
     @property
     def device_class(self) -> BinarySensorDeviceClass:
