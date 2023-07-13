@@ -101,7 +101,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     manager = SSHManager(
         data[CONF_HOST],
         name=data[CONF_NAME],
-        mac_address=data[CONF_MAC],
         port=data[CONF_PORT],
         username=data.get(CONF_USERNAME),
         password=data.get(CONF_PASSWORD),
@@ -112,6 +111,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         collection=get_collection(hass, options),
         logger=_LOGGER,
     )
+
+    manager.set_mac_address(data[CONF_MAC])
 
     state_coordinator = StateCoordinator(hass, manager, options[CONF_UPDATE_INTERVAL])
 
