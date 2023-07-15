@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 def get_command_renderer(hass: HomeAssistant) -> Callable:
     def renderer(command_string):
         template = Template(command_string, hass)
-        return template.render(parse_result=False)
+        return template.async_render(parse_result=False)
 
     return renderer
 
@@ -26,7 +26,7 @@ def get_command_renderer(hass: HomeAssistant) -> Callable:
 def get_value_renderer(hass: HomeAssistant, value_template: str) -> Callable:
     def renderer(value: str):
         template = Template(value_template, hass)
-        return template.render(variables={"value": value}, parse_result=False)
+        return template.async_render(variables={"value": value}, parse_result=False)
 
     return renderer
 
@@ -50,8 +50,7 @@ def get_child_added_listener(
 
         if entity:
             state_coordinator.logger.warning(
-                "%s: %s instance with key %s exists already",
-                state_coordinator.name,
+                "%s instance with key %s exists already",
                 cls.__name__,
                 child.key,
             )
@@ -81,8 +80,7 @@ def get_child_removed_listener(
 
         if entity is None:
             state_coordinator.logger.warning(
-                "%s: %s instance with key %s doesn't exist",
-                state_coordinator.name,
+                "%s instance with key %s doesn't exist",
                 cls.__name__,
                 child.key,
             )

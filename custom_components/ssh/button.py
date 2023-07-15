@@ -24,7 +24,7 @@ async def async_setup_entry(
     entities = [PowerEntity(entry_data.state_coordinator, config_entry)]
 
     for command in entry_data.manager.action_commands:
-        if command.get_variable_keys(entry_data.manager):
+        if command.required_variables:
             continue
         if command.key == ActionKey.TURN_OFF:
             continue

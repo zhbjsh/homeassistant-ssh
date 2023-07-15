@@ -6,7 +6,7 @@ from datetime import timedelta
 from ssh_terminal_manager import (
     CommandError,
     SensorCommand,
-    SSHAuthError,
+    SSHAuthenticationError,
     SSHHostKeyUnknownError,
     SSHManager,
 )
@@ -38,12 +38,12 @@ class StateCoordinator(DataUpdateCoordinator):
             await self.manager.async_update_state()
         except SSHHostKeyUnknownError as exc:
             self.stop()
-            raise ConfigEntryError from exc
-        except SSHAuthError as exc:
+            raise ConfigEntryError(exc) from exc
+        except SSHAuthenticationError as exc:
             self.stop()
-            raise ConfigEntryAuthFailed from exc
+            raise ConfigEntryAuthFailed(exc) from exc
         except Exception as exc:
-            raise UpdateFailed(f"Exception during update: {exc}") from exc
+            raise UpdateFailed(f"Exception updating {self.name}: {exc}") from exc
 
 
 class SensorCommandCoordinator(DataUpdateCoordinator):

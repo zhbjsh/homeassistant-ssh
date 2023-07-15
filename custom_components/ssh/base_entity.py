@@ -6,6 +6,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_DEVICE_CLASS, CONF_ENABLED, CONF_ICON
 from homeassistant.helpers.entity import DeviceInfo, generate_entity_id
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import slugify
 
 from .const import DOMAIN
 from .coordinator import StateCoordinator
@@ -14,6 +15,7 @@ from .coordinator import StateCoordinator
 class BaseEntity(CoordinatorEntity):
     coordinator: StateCoordinator
     _entity_id_format: str
+    _category = "base"
     _attr_has_entity_name = True
 
     def __init__(
@@ -29,13 +31,12 @@ class BaseEntity(CoordinatorEntity):
         self.entity_id = generate_entity_id(
             self._entity_id_format,
             f"{self._manager.name}_{self._id}",
-            [],
-            self.coordinator.hass,
+            hass=self.coordinator.hass,
         )
 
     @property
     def _id(self) -> str:
-        return self.name
+        return slugify(self.name)
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -48,7 +49,7 @@ class BaseEntity(CoordinatorEntity):
 
     @property
     def unique_id(self) -> str:
-        return f"{self._config_entry.unique_id}_{self.entity_id}"
+        return f"{self._config_entry.unique_id}_{self._category}_{self._id}"
 
     @property
     def device_class(self) -> Any | None:
@@ -73,6 +74,8 @@ class BaseEntity(CoordinatorEntity):
 
 
 class BaseActionEntity(BaseEntity):
+    _category = "action"
+
     def __init__(
         self,
         state_coordinator: StateCoordinator,
@@ -100,6 +103,8 @@ class BaseActionEntity(BaseEntity):
 
 
 class BaseSensorEntity(BaseEntity):
+    _category = "sensor"
+
     def __init__(
         self,
         state_coordinator: StateCoordinator,

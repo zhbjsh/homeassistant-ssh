@@ -12,7 +12,7 @@ from ssh_terminal_manager import (
     DEFAULT_PORT,
     Collection,
     OfflineError,
-    SSHAuthError,
+    SSHAuthenticationError,
     SSHConnectError,
     SSHHostKeyUnknownError,
     SSHManager,
@@ -191,7 +191,7 @@ async def validate_name(hass: HomeAssistant, name: str):
 
     for entry in hass.config_entries.async_entries(DOMAIN):
         if slugify(entry.data[CONF_NAME]) == slugify(name):
-            raise NameExistsError
+            raise NameExistsError(f"Name {name} exists already")
 
     return name
 
@@ -209,7 +209,7 @@ def validate_mac_address(mac_address: str):
     )
 
     if not re.fullmatch(pattern, mac_address):
-        raise MACAddressInvalidError
+        raise MACAddressInvalidError(f"MAC Address {mac_address} is invalid")
 
     return mac_address
 
@@ -242,18 +242,18 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     await manager.async_disconnect()
 
     if mac_address := manager.mac_address:
-        _LOGGER.info("%s: Detected MAC address: %s", manager.host, mac_address)
+        _LOGGER.info("Detected MAC address: %s", mac_address)
         try:
             data[CONF_MAC] = validate_mac_address(mac_address)
-        except MACAddressInvalidError:
-            _LOGGER.info("%s: Detected MAC address is invalid", manager.host)
+        except MACAddressInvalidError as exc:
+            _LOGGER.info(exc)
 
     if hostname := manager.hostname:
-        _LOGGER.info("%s: Detected hostname: %s", manager.host, hostname)
+        _LOGGER.info("Detected hostname: %s", hostname)
         try:
             data[CONF_NAME] = await validate_name(hass, hostname)
-        except NameExistsError:
-            _LOGGER.info("%s: Detected hostname exists already", manager.host)
+        except NameExistsError as exc:
+            _LOGGER.info(exc)
 
     options = {
         CONF_ALLOW_TURN_OFF: manager.allow_turn_off,
@@ -362,15 +362,20 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._data = user_input
             try:
                 self._data, self._options = await validate_input(self.hass, user_input)
-            except PermissionError:
+            except PermissionError as exc:
                 errors["base"] = "permission_error"
-            except OfflineError:
+                _LOGGER.warning(exc)
+            except OfflineError as exc:
                 errors["base"] = "offline_error"
-            except SSHHostKeyUnknownError:
+                _LOGGER.warning(exc)
+            except SSHHostKeyUnknownError as exc:
+                _LOGGER.warning(exc)
                 errors["base"] = "ssh_host_key_unknown_error"
-            except SSHAuthError:
-                errors["base"] = "ssh_auth_error"
-            except SSHConnectError:
+            except SSHAuthenticationError as exc:
+                _LOGGER.warning(exc)
+                errors["base"] = "ssh_authentication_error"
+            except SSHConnectError as exc:
+                _LOGGER.warning(exc)
                 errors["base"] = "ssh_connect_error"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
@@ -444,7 +449,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._data[CONF_MAC] = user_input[CONF_MAC]
             try:
                 self._data[CONF_MAC] = validate_mac_address(user_input[CONF_MAC])
-            except MACAddressInvalidError:
+            except MACAddressInvalidError as exc:
+                _LOGGER.warning(exc)
                 errors["base"] = "mac_address_invalid_error"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
@@ -478,7 +484,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._data[CONF_NAME] = await validate_name(
                     self.hass, user_input[CONF_NAME]
                 )
-            except NameExistsError:
+            except NameExistsError as exc:
+                _LOGGER.warning(exc)
                 errors["base"] = "name_exists_error"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")

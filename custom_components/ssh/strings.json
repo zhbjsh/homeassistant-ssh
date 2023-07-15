@@ -2,6 +2,7 @@
   "config": {
     "step": {
       "user": {
+        "description": "Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step.",
         "data": {
           "host": "[%key:common::config_flow::data::host%]",
           "username": "[%key:common::config_flow::data::username%]",
@@ -33,10 +34,10 @@
       }
     },
     "error": {
-      "permission_error": "Can't read/write host keys file",
-      "offline_error": "Device is offline",
-      "ssh_host_key_unknown_error": "Host key is unknown",
-      "ssh_auth_error": "SSH authentication failed",
+      "permission_error": "No permission to access host keys file",
+      "offline_error": "Host is offline",
+      "ssh_host_key_unknown_error": "SSH host key is unknown",
+      "ssh_authentication_error": "SSH authentication failed",
       "ssh_connect_error": "SSH connection failed",
       "mac_address_invalid_error": "MAC address is invalid",
       "name_exists_error": "Name exists already",
@@ -50,6 +51,7 @@
   "options": {
     "step": {
       "init": {
+        "description": "Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step.",
         "data": {
           "allow_turn_off": "Allow to turn the device off",
           "update_interval": "Update interval",

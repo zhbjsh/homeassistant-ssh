@@ -103,7 +103,7 @@ DEFAULT_SENSOR_ATTRIBUTES: dict[str, dict] = {
     },
     SensorKey.TEMPERATURE: {CONF_DEVICE_CLASS: SensorDeviceClass.TEMPERATURE},
     SensorKey.CPU_LOAD: {CONF_ICON: "mdi:server"},
-    SensorKey.PROCESSES: {CONF_ICON: "mdi:cog-box"},
+    SensorKey.PROCESSES: {CONF_ICON: "mdi:cogs"},
 }
 
 

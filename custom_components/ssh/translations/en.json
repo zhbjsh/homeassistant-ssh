@@ -7,11 +7,11 @@
         "error": {
             "mac_address_invalid_error": "MAC address is invalid",
             "name_exists_error": "Name exists already",
-            "offline_error": "Device is offline",
-            "permission_error": "Can't read/write host keys file",
-            "ssh_auth_error": "SSH authentication failed",
+            "offline_error": "Host is offline",
+            "permission_error": "No permission to access host keys file",
+            "ssh_authentication_error": "SSH authentication failed",
             "ssh_connect_error": "SSH connection failed",
-            "ssh_host_key_unknown_error": "Host key is unknown",
+            "ssh_host_key_unknown_error": "SSH host key is unknown",
             "unknown": "Unexpected error"
         },
         "step": {
@@ -43,7 +43,8 @@
                     "password": "Password",
                     "port": "Port",
                     "username": "Username"
-                }
+                },
+                "description": "Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step."
             }
         }
     },
@@ -60,7 +61,8 @@
                     "command_timeout": "Command timeout",
                     "sensor_commands": "Sensor commands",
                     "update_interval": "Update interval"
-                }
+                },
+                "description": "Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step."
             }
         }
     }

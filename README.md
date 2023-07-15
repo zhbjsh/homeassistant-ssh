@@ -168,111 +168,116 @@ Sensors with `type: binary` appear as binary sensor (if not controllable) or swi
 
 ### Examples
 
-##### Action command
+##### Action command OK
 
 ```yaml
-command: ~/my_script.sh
-name: Execute script
-icon: mdi:bash
+- command: ~/my_script.sh
+  name: Execute my script
+  icon: mdi:script-text-play
 ```
 
-##### Action command with template
+##### Action command with template OK
 
 ```yaml
-command: echo "Today will be {{ states("weather.forecast_home") }}" | mail -s "Weather" me@example.com
-name: Send weather forecast
+- command: echo 'Today will be {{ states("weather.forecast_home") }}' | mail -s "Weather" 
+  name: Send weather forecast
+  icon: mdi:cloud-arrow-right
 ```
 
-##### Action command with variable
+##### Action command with variable OK
 
 ```yaml
-command: echo {note} >> my_notes.txt
-name: Add note
+- command: echo '@variable{note}' >> my_notes.txt
+  name: Add note
 ```
 
-##### Sensor command (static sensor)
+##### Sensor command (static sensor) Always 0?
 
 ```yaml
-command: who --count | awk -F "=" 'NR>1 {{print $2}}'
-interval: 60
-sensors:
-  - type: number
-    name: Logged in users
-    icon: mdi:account
+- command: who --count | awk -F "=" 'NR>1 {print $2}'
+  scan_interval: 60
+  sensors:
+    - type: number
+      name: Logged in users
+      icon: mdi:account-multiple
 ```
 
-##### Sensor command with sensor value (static sensor)
+##### Sensor command with sensor value (static sensor) Remove?
 
 ```yaml
-command: /sys/class/net/{interface}/device/power/wakeup
-sensors:
-  - type: binary
-    name: Wake on LAN
-    payload_on: enabled
+- command: /sys/class/net/@sensor{network_interface}/device/power/wakeup
+  sensors:
+    - type: binary
+      name: Wake on LAN
+      payload_on: enabled
 ```
 
-##### Sensor command with value template (static sensor)
-
-##### Sensor command (multiple static sensors)
+##### Sensor command with value template (static sensor) INCOMPLETE!
 
 ```yaml
-command: lscpu | awk -F ":" '/^Architecture|^CPU\(s\)|^Model name|^CPU max|^CPU min/ {{print $2}}'
-sensors:
-  - type: text
-    name: CPU architecture
-  - type: number
-    name: CPU number
-    integer: true
-  - type: text
-    name: CPU model name
-  - type: number
-    name: CPU MHz max.
-  - type: number
-    name: CPU MHz min.
+- command: get_me_some_number
+  sensors:
+    - type: number
+      name: Some number
+      value_template: "{{ value | multiply(100) }}"
 ```
 
-##### Sensor command (controllable static sensor)
+##### Sensor command (multiple static sensors) OK
 
 ```yaml
-command: cat app.conf | awk -F "=" '/^log_level/ {{print $2}}'
-sensors:
-  - type: text
-    name: Log level
-    command_set: sed -i "s|^log_level=.\*|log_level={value}|" app.conf
-    options:
-      - warning
-      - info
-      - debug
+- command: lscpu | awk -F ":" '/^CPU\(s\)|^Model name|^CPU max/ {print $2}'
+  sensors:
+    - type: number
+      name: CPU cores
+    - type: text
+      name: CPU model
+    - type: number
+      name: CPU MHz max.
 ```
 
-##### Sensor command (dynamic sensor)
+##### Sensor command (controllable static sensor) OK
 
 ```yaml
-command: ls -lp /mnt/backup | awk 'NR>1 && !/\// {{print $5 / 10^6 "|" $NF}}'
-interval: 300
-sensors:
-  - type: number
-    name: File
-    dynamic: true
-    separator: "|"
-    unit_of_measurement: MB
-    device_class: data_size
-    icon: mdi:file
+- command: cat /etc/app.conf | awk -F "=" '/^log_level/ {print $2}'
+  sensors:
+    - type: text
+      name: Log level
+      command_set: sed -i "s|^log_level=.*|log_level=@value|" app.conf
+      options:
+        - warning
+        - info
+        - debug
 ```
 
-##### Sensor command (controllable dynamic sensor)
+##### Sensor command (dynamic sensor) OK
 
 ```yaml
-command: systemctl -a | awk '/bluetooth.service|smbd.service/ {{print $4 "|" $1}}'
-interval: 300
-sensors:
-  - type: binary
-    key: systemctl
-    dynamic: true
-    separator: "|"
-    command_on: systemctl start {id}
-    command_off: systemctl stop {id}
-    payload_on: running
+- command: ls -lp /mnt/backup | awk 'NR>1 && !/\// {print $NF "|" $5}'
+  sensors:
+    - type: number
+      name: Backup file
+      dynamic: true
+      separator: "|"
+      unit_of_measurement: B
+      suggested_unit_of_measurement: MB
+      suggested_display_precision: 3
+      device_class: data_size
+      icon: mdi:file
+```
+
+##### Sensor command (controllable dynamic sensor) OK
+
+```yaml
+- command: systemctl -a | awk '/bluetooth.service|smbd.service/ {print $1 "|" $4}'
+  scan_interval: 300
+  sensors:
+    - type: binary
+      key: service
+      dynamic: true
+      separator: "|"
+      command_on: systemctl start @id
+      command_off: systemctl stop @id
+      payload_on: running
 ```
 
 ## Services
