@@ -43,7 +43,11 @@ class BaseEntity(CoordinatorEntity):
         return DeviceInfo(
             identifiers={(DOMAIN, self._config_entry.unique_id)},
             name=self._config_entry.title,
-            sw_version=self._manager.os_version,
+            sw_version=(
+                f"{self._manager.os_name} {self._manager.os_version}"
+                if self._manager.os_name and self._manager.os_version
+                else None
+            ),
             hw_version=self._manager.machine_type,
         )
 

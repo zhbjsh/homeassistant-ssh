@@ -242,18 +242,18 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     await manager.async_disconnect()
 
     if mac_address := manager.mac_address:
-        _LOGGER.info("Detected MAC address: %s", mac_address)
+        _LOGGER.debug("Detected MAC address: %s", mac_address)
         try:
             data[CONF_MAC] = validate_mac_address(mac_address)
         except MACAddressInvalidError as exc:
-            _LOGGER.info(exc)
+            _LOGGER.debug(exc)
 
     if hostname := manager.hostname:
-        _LOGGER.info("Detected hostname: %s", hostname)
+        _LOGGER.debug("Detected hostname: %s", hostname)
         try:
             data[CONF_NAME] = await validate_name(hass, hostname)
         except NameExistsError as exc:
-            _LOGGER.info(exc)
+            _LOGGER.debug(exc)
 
     options = {
         CONF_ALLOW_TURN_OFF: manager.allow_turn_off,

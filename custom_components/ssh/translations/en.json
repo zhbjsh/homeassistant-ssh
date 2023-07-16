@@ -19,14 +19,14 @@
                 "data": {
                     "mac_address": "Mac address"
                 },
-                "description": "Please enter the MAC address of the device",
+                "description": "Please enter the MAC address of the device.",
                 "title": "MAC address"
             },
             "name": {
                 "data": {
                     "name": "Name"
                 },
-                "description": "Please enter a name for the device",
+                "description": "Please enter a name for the device.",
                 "title": "Name"
             },
             "reauth_confirm": {
@@ -35,7 +35,7 @@
             },
             "user": {
                 "data": {
-                    "add_host_keys": "Add unknown host key to host keys file",
+                    "add_host_keys": "Automatically add key to host keys file",
                     "default_commands": "Default commands",
                     "host": "Host",
                     "host_keys_filename": "Host keys file",
@@ -43,8 +43,7 @@
                     "password": "Password",
                     "port": "Port",
                     "username": "Username"
-                },
-                "description": "Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step."
+                }
             }
         }
     },
@@ -61,8 +60,7 @@
                     "command_timeout": "Command timeout",
                     "sensor_commands": "Sensor commands",
                     "update_interval": "Update interval"
-                },
-                "description": "Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step. Markdown that is shown with the step."
+                }
             }
         }
     }
