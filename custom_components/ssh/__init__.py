@@ -144,51 +144,44 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     device_entry = registry.async_get_device({(DOMAIN, entry.unique_id)})
     entry_data.device_entry = device_entry
 
-    def gather_results(coro: Coroutine):
+    def get_response(coro: Coroutine):
         @wraps(coro)
         async def wrapper(call: ServiceCall) -> ServiceResponse:
             entry_ids = await async_extract_config_entry_ids(hass, call)
-            results: list[dict] = await asyncio.gather(
+            data = await asyncio.gather(
                 *(coro(hass.data[DOMAIN][entry_id], call) for entry_id in entry_ids)
             )
-            return {id: data for result in results for id, data in result.items()}
+            return {"results": [result for results in data for result in results]}
 
         return wrapper
 
     def get_command_result(coro: Coroutine):
         @wraps(coro)
-        async def wrapper(entry_data: EntryData, call: ServiceCall) -> dict[str, dict]:
-            device_id = entry_data.device_entry.id
+        async def wrapper(entry_data: EntryData, call: ServiceCall) -> list[dict]:
             try:
                 output: CommandOutput = await coro(entry_data, call)
             except Exception as exc:  # pylint: disable=broad-except
-                return {device_id: {"success": False, "error": str(exc)}}
-            return {
-                device_id: {
+                result = {
+                    "device_id": entry_data.device_entry.id,
+                    "device_name": entry_data.device_entry.name,
+                    "success": False,
+                    "error": str(exc),
+                }
+            else:
+                result = {
+                    "device_id": entry_data.device_entry.id,
+                    "device_name": entry_data.device_entry.name,
                     "success": True,
+                    "command": output.command_string,
                     "stdout": output.stdout,
                     "stderr": output.stderr,
                     "code": output.code,
                 }
-            }
+            return [result]
 
         return wrapper
 
-    @gather_results
-    async def turn_on(entry_data: EntryData, call: ServiceCall) -> dict[str, dict]:
-        device_id = entry_data.device_entry.id
-        try:
-            await entry_data.manager.async_turn_on()
-        except Exception as exc:  # pylint: disable=broad-except
-            return {device_id: {"success": False, "error": str(exc)}}
-        return {device_id: {"success": True}}
-
-    @gather_results
-    @get_command_result
-    async def turn_off(entry_data: EntryData, call: ServiceCall):
-        return await entry_data.manager.async_turn_off()
-
-    @gather_results
+    @get_response
     @get_command_result
     async def execute_command(
         entry_data: EntryData, call: ServiceCall
@@ -201,15 +194,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         variables = call.data.get(CONF_VARIABLES)
         return await entry_data.manager.async_execute_command(command, variables)
 
-    @gather_results
+    @get_response
     @get_command_result
     async def run_action(entry_data: EntryData, call: ServiceCall) -> CommandOutput:
         action_key = call.data[CONF_KEY]
         variables = call.data.get(CONF_VARIABLES)
         return await entry_data.manager.async_run_action(action_key, variables)
 
-    @gather_results
-    async def poll_sensor(entry_data: EntryData, call: ServiceCall) -> CommandOutput:
+    @get_response
+    async def poll_sensor(entry_data: EntryData, call: ServiceCall) -> list[dict]:
         entities = [
             entity
             for platform in entity_platform.async_get_platforms(hass, DOMAIN)
@@ -220,26 +213,38 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         selected_entities = await async_extract_entities(hass, entities, call)
         sensor_keys = [entity.key for entity in selected_entities]
         sensors = await entry_data.manager.async_poll_sensors(sensor_keys)
-        return {
-            entity.entity_id: {"success": sensors[i].value is not None}
+        return [
+            {
+                "entity_id": entity.entity_id,
+                "entity_name": entity.name,
+                "success": sensors[i].value is not None,
+            }
             for i, entity in enumerate(selected_entities)
-        }
+        ]
 
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_TURN_ON,
-        turn_on,
-        None,
-        SupportsResponse.ONLY,
-    )
+    @get_response
+    async def turn_on(entry_data: EntryData, call: ServiceCall) -> list[dict]:
+        try:
+            await entry_data.manager.async_turn_on()
+        except Exception as exc:  # pylint: disable=broad-except
+            result = {
+                "device_id": entry_data.device_entry.id,
+                "device_name": entry_data.device_entry.name,
+                "success": False,
+                "error": str(exc),
+            }
+        else:
+            result = {
+                "device_id": entry_data.device_entry.id,
+                "device_name": entry_data.device_entry.name,
+                "success": True,
+            }
+        return [result]
 
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_TURN_OFF,
-        turn_off,
-        None,
-        SupportsResponse.ONLY,
-    )
+    @get_response
+    @get_command_result
+    async def turn_off(entry_data: EntryData, call: ServiceCall) -> CommandOutput:
+        return await entry_data.manager.async_turn_off()
 
     hass.services.async_register(
         DOMAIN,
@@ -261,6 +266,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         DOMAIN,
         SERVICE_POLL_SENSOR,
         poll_sensor,
+        None,
+        SupportsResponse.ONLY,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_TURN_ON,
+        turn_on,
+        None,
+        SupportsResponse.ONLY,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_TURN_OFF,
+        turn_off,
         None,
         SupportsResponse.ONLY,
     )
