@@ -1,21 +1,3 @@
-turn_on:
-  name: Turn on
-  description: Turn the selected devices on.
-  target:
-    device:
-      integration: ssh
-    entity:
-      integration: ssh
-
-turn_off:
-  name: Turn off
-  description: Turn the selected devices off.
-  target:
-    device:
-      integration: ssh
-    entity:
-      integration: ssh
-
 execute_command:
   name: Execute command
   description: Execute a command on the selected devices.
@@ -41,7 +23,7 @@ execute_command:
           unit_of_measurement: "s"
     variables:
       name: Variables
-      description: Variables to pass to the command.
+      description: 'Variables to pass to the command. Example: A variable `name` can be used inside the command as `@variable{name}`.'
       selector:
         object:
 
@@ -68,7 +50,7 @@ run_action:
 
 poll_sensor:
   name: Poll sensor
-  description: Poll a sensor on the device.
+  description: Poll one or more sensors.
   target:
     device:
       integration: ssh
@@ -81,3 +63,21 @@ poll_sensor:
         - sensor
         - switch
         - text
+
+turn_on:
+  name: Turn on
+  description: Turn the selected devices on.
+  target:
+    device:
+      integration: ssh
+    entity:
+      integration: ssh
+
+turn_off:
+  name: Turn off
+  description: Turn the selected devices off.
+  target:
+    device:
+      integration: ssh
+    entity:
+      integration: ssh

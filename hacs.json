@@ -1,5 +1,6 @@
 {
   "name": "SSH",
   "content_in_root": true,
-  "render_readme": true
+  "render_readme": true,
+  "homeassistant": "2023.7"
 }
