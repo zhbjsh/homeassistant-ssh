@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Coroutine
 from dataclasses import dataclass
+from functools import wraps
 
 import voluptuous as vol
-from ssh_terminal_manager import Command, CommandError, SSHManager
+from ssh_terminal_manager import Command, CommandOutput, SSHManager
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -23,8 +25,14 @@ from homeassistant.const import (
     CONF_VARIABLES,
     Platform,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import entity_platform
+from homeassistant.core import (
+    HomeAssistant,
+    ServiceCall,
+    ServiceResponse,
+    SupportsResponse,
+)
+from homeassistant.helpers import device_registry, entity_platform
+from homeassistant.helpers.device_registry import DeviceEntry, DeviceRegistry
 from homeassistant.helpers.service import (
     async_extract_config_entry_ids,
     async_extract_entities,
@@ -86,6 +94,7 @@ class EntryData:
     manager: SSHManager
     state_coordinator: StateCoordinator
     command_coordinators: list[SensorCommandCoordinator]
+    device_entry: DeviceEntry | None = None
 
 
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -122,109 +131,114 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if command.interval
     ]
 
+    entry_data = EntryData(manager, state_coordinator, command_coordinators)
+
     hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = EntryData(
-        manager, state_coordinator, command_coordinators
-    )
+    hass.data[DOMAIN][entry.entry_id] = entry_data
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
     await state_coordinator.async_config_entry_first_refresh()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    async def turn_on(call: ServiceCall):
-        entry_ids = await async_extract_config_entry_ids(hass, call)
+    registry: DeviceRegistry = device_registry.async_get(hass)
+    device_entry = registry.async_get_device({(DOMAIN, entry.unique_id)})
+    entry_data.device_entry = device_entry
 
-        async def func(entry_id: str):
-            entry_data: EntryData = hass.data[DOMAIN][entry_id]
-            await entry_data.manager.async_turn_on()
+    def gather_results(coro: Coroutine):
+        @wraps(coro)
+        async def wrapper(call: ServiceCall) -> ServiceResponse:
+            entry_ids = await async_extract_config_entry_ids(hass, call)
+            results: list[dict] = await asyncio.gather(
+                *(coro(hass.data[DOMAIN][entry_id], call) for entry_id in entry_ids)
+            )
+            return {id: data for result in results for id, data in result.items()}
 
-        await asyncio.gather(*(func(entry_id) for entry_id in entry_ids))
+        return wrapper
 
-    async def turn_off(call: ServiceCall):
-        entry_ids = await async_extract_config_entry_ids(hass, call)
-
-        async def func(entry_id: str):
-            entry_data: EntryData = hass.data[DOMAIN][entry_id]
+    def get_command_result(coro: Coroutine):
+        @wraps(coro)
+        async def wrapper(entry_data: EntryData, call: ServiceCall) -> dict[str, dict]:
+            device_id = entry_data.device_entry.id
             try:
-                await entry_data.manager.async_turn_off()
-            except CommandError:
-                pass
+                output: CommandOutput = await coro(entry_data, call)
+            except Exception as exc:  # pylint: disable=broad-except
+                return {device_id: {"success": False, "error": str(exc)}}
+            return {
+                device_id: {
+                    "success": True,
+                    "stdout": output.stdout,
+                    "stderr": output.stderr,
+                    "code": output.code,
+                }
+            }
 
-        await asyncio.gather(*(func(entry_id) for entry_id in entry_ids))
+        return wrapper
 
-    async def execute_command(call: ServiceCall):
-        entry_ids = await async_extract_config_entry_ids(hass, call)
-        command_string = call.data[CONF_COMMAND]
-        timeout = call.data.get(CONF_TIMEOUT)
-        variables = call.data.get(CONF_VARIABLES)
+    @gather_results
+    async def turn_on(entry_data: EntryData, call: ServiceCall) -> dict[str, dict]:
+        device_id = entry_data.device_entry.id
+        try:
+            await entry_data.manager.async_turn_on()
+        except Exception as exc:  # pylint: disable=broad-except
+            return {device_id: {"success": False, "error": str(exc)}}
+        return {device_id: {"success": True}}
+
+    @gather_results
+    @get_command_result
+    async def turn_off(entry_data: EntryData, call: ServiceCall):
+        return await entry_data.manager.async_turn_off()
+
+    @gather_results
+    @get_command_result
+    async def execute_command(
+        entry_data: EntryData, call: ServiceCall
+    ) -> CommandOutput:
         command = Command(
-            command_string,
-            timeout=timeout,
+            call.data[CONF_COMMAND],
+            timeout=call.data.get(CONF_TIMEOUT),
             renderer=get_command_renderer(hass),
         )
+        variables = call.data.get(CONF_VARIABLES)
+        return await entry_data.manager.async_execute_command(command, variables)
 
-        async def func(entry_id: str):
-            entry_data: EntryData = hass.data[DOMAIN][entry_id]
-            try:
-                await entry_data.manager.async_execute_command(command, variables)
-            except CommandError:
-                pass
-
-        await asyncio.gather(*(func(entry_id) for entry_id in entry_ids))
-
-    async def run_action(call: ServiceCall):
-        entry_ids = await async_extract_config_entry_ids(hass, call)
+    @gather_results
+    @get_command_result
+    async def run_action(entry_data: EntryData, call: ServiceCall) -> CommandOutput:
         action_key = call.data[CONF_KEY]
         variables = call.data.get(CONF_VARIABLES)
+        return await entry_data.manager.async_run_action(action_key, variables)
 
-        async def func(entry_id: str):
-            entry_data: EntryData = hass.data[DOMAIN][entry_id]
-            try:
-                await entry_data.manager.async_run_action(action_key, variables)
-            except CommandError:
-                pass
-
-        await asyncio.gather(*(func(entry_id) for entry_id in entry_ids))
-
-    async def poll_sensor(call: ServiceCall):
-        sensor_entities = [
+    @gather_results
+    async def poll_sensor(entry_data: EntryData, call: ServiceCall) -> CommandOutput:
+        entities = [
             entity
             for platform in entity_platform.async_get_platforms(hass, DOMAIN)
             for entity in platform.entities.values()
             if isinstance(entity, BaseSensorEntity)
+            and entity.coordinator == entry_data.state_coordinator
         ]
-
-        entities_by_entry_id: dict[str, list[BaseSensorEntity]] = {
-            entry_id: []
-            for entry_id in await async_extract_config_entry_ids(hass, call)
+        selected_entities = await async_extract_entities(hass, entities, call)
+        sensor_keys = [entity.key for entity in selected_entities]
+        sensors = await entry_data.manager.async_poll_sensors(sensor_keys)
+        return {
+            entity.entity_id: {"success": sensors[i].value is not None}
+            for i, entity in enumerate(selected_entities)
         }
-
-        for entity in await async_extract_entities(hass, sensor_entities, call):
-            entry_id = entity.coordinator.config_entry.entry_id
-            entities_by_entry_id[entry_id].append(entity)
-
-        async def func(entry_id: str, entities: list[BaseSensorEntity]):
-            entry_data: EntryData = hass.data[DOMAIN][entry_id]
-            sensor_keys = [entity.key for entity in entities]
-            await entry_data.manager.async_poll_sensors(sensor_keys)
-
-        await asyncio.gather(
-            *(
-                func(entry_id, entities)
-                for entry_id, entities in entities_by_entry_id.items()
-            )
-        )
 
     hass.services.async_register(
         DOMAIN,
         SERVICE_TURN_ON,
         turn_on,
+        None,
+        SupportsResponse.ONLY,
     )
 
     hass.services.async_register(
         DOMAIN,
         SERVICE_TURN_OFF,
         turn_off,
+        None,
+        SupportsResponse.ONLY,
     )
 
     hass.services.async_register(
@@ -232,6 +246,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         SERVICE_EXECUTE_COMMAND,
         execute_command,
         EXECUTE_COMMAND_SCHEMA,
+        SupportsResponse.ONLY,
     )
 
     hass.services.async_register(
@@ -239,12 +254,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         SERVICE_RUN_ACTION,
         run_action,
         RUN_ACTION_SCHEMA,
+        SupportsResponse.ONLY,
     )
 
     hass.services.async_register(
         DOMAIN,
         SERVICE_POLL_SENSOR,
         poll_sensor,
+        None,
+        SupportsResponse.ONLY,
     )
 
     return True
