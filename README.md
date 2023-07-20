@@ -231,19 +231,20 @@ A simple sensor command with one static sensor. The command returns a number on 
 
 #### Sensor command with static sensor and value template
 
-[INCOMPLETE!]
+This sensor uses a `value_template` to transform the command output from seconds to days.
 
 ```yaml
-- command: get_me_some_number
+- command: cat /proc/uptime | awk '{print $1}'
   sensors:
     - type: number
-      name: Some number
-      value_template: "{{ value | multiply(100) }}"
+      name: Uptime
+      unit_of_measurement: "d"
+      value_template: "{{ value // 86400 }}"
 ```
 
 ```shell
 # Example output:
-2
+248938.30
 ```
 
 #### Sensor command with multiple static sensors
@@ -273,7 +274,7 @@ Cortex-A53
 
 #### Sensor command with controllable static sensor
 
-This command returns the current value of the setting `log_level` in a config file. The `command_set` command of the sensor is used to change the value, which makes the sensor controllable and creates a select entity. Without the `options` list, a text entity would be generated.
+This command returns the current value of the `log_level` setting in a config file. The sensors `command_set` is used to change the value, which makes the sensor controllable and creates a select entity. Without the `options` list, a text entity would be generated.
 
 ```yaml
 - command: cat /etc/app.conf | awk -F "=" '/^log_level/ {print $2}'
