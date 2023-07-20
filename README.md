@@ -112,7 +112,7 @@ Sensors are updated every time their command executes. Depending on type and con
 
 ##### Static sensors
 
-Static sensors are created by default. Each static sensor gets its value from one line of the command output. Sstatic sensors must therefore be defined in the right order ([example](#sensor-command-with-multiple-static-sensors)).
+Static sensors are created by default. Each static sensor gets its value from one line of the command output. Static sensors must therefore be defined in the right order ([example](#sensor-command-with-multiple-static-sensors)).
 
 ##### Dynamic sensors
 
@@ -131,7 +131,7 @@ Both static and dynamic sensors can be made controllable by adding a `command_se
 | `key`                           | The sensor key (can be included in commands).                                    | string                                                                                             | If no `name` provided | Slugified `name` |
 | `dynamic`                       | Set `true` for a dynamic sensor.                                                 | boolean                                                                                            | no                    | `false`          |
 | `separator`                     | Separator between ID and value in the command output (only for dynamic sensors). | string                                                                                             | no                    |                  |
-| `value_template`                | Template to render the sensor value.                                             | [template](https://www.home-assistant.io/docs/configuration/templating/)                           | no                    |                  |
+| `value_template`                | Template to render the sensor value ([example](#sensor-command-with-static-sensor-and-value-template)).                                             | [template](https://www.home-assistant.io/docs/configuration/templating/)                           | no                    |                  |
 | `command_set`                   | Command to set the sensor value, makes the sensor controllable.                  | string                                                                                             | no                    |                  |
 | `unit_of_measurement`           | The sensor unit.                                                                 | string                                                                                             | no                    |                  |
 | `suggested_unit_of_measurement` | The suggested unit of the entity.                                                | string                                                                                             | no                    |                  |
@@ -238,8 +238,8 @@ This sensor uses a `value_template` to transform the command output from seconds
   sensors:
     - type: number
       name: Uptime
-      unit_of_measurement: "d"
-      value_template: "{{ value // 86400 }}"
+      unit_of_measurement: d
+      value_template: "{{ value | float  // 86400 }}"
 ```
 
 ```shell
