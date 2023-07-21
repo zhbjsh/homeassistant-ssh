@@ -91,13 +91,13 @@ Action commands are executed manually by pressing a button or calling the [`ssh.
 
 ##### Configuration
 
-| Name           | Description                                                                      | Type                                                                                               | Required               | Default          |
-| -------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ---------------------- | ---------------- |
-| `name`         | The name of the button entity.                                                   | string                                                                                             | If no `key` specified  |                  |
-| `key`          | The action key (can be used with [`ssh.run_action`](#run-action-sshrun_action)). | string                                                                                             | If no `name` specified | Slugified `name` |
-| `device_class` | The device class of the button entity.                                           | [device_class](https://www.home-assistant.io/docs/configuration/customizing-devices/#device-class) | no                     |                  |
-| `icon`         | The icon of the button entity.                                                   | string                                                                                             | no                     |                  |
-| `enabled`      | Set `false` to disable the button entity initially.                              | boolean                                                                                            | no                     | `true`           |
+| Name                              | Description                                                                                                           | Type    | Required               | Default          |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------- | ---------------- |
+| `name`                            | The name of the entity.                                                                                               | string  | If no `key` specified  |                  |
+| `key`                             | The action key (can be used with [`ssh.run_action`](#run-action-sshrun_action)).                                      | string  | If no `name` specified | Slugified `name` |
+| `device_class`                    | The [device class](https://www.home-assistant.io/docs/configuration/customizing-devices/#device-class) of the entity. | no      |                        |
+| `icon`                            | The icon of the entity.                                                                                               | string  | no                     |                  |
+| `entity_registry_enabled_default` | Set `false` to disable the entity by default.                                                                         | boolean | no                     | `true`           |
 
 ### Sensor commands
 
@@ -128,39 +128,39 @@ Both static and dynamic sensors can be made controllable by adding a `command_se
 
 ##### Configuration
 
-| Name                            | Description                                                                      | Type                                                                                               | Required               | Default          |
-| ------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ---------------------- | ---------------- |
-| `type`                          | The sensor type (`text`, `number` or `binary`).                                  | string                                                                                             | yes                    |                  |
-| `name`                          | The name of the created entity.                                                  | string                                                                                             | If no `key` specified  |                  |
-| `key`                           | The sensor key (can be included in commands).                                    | string                                                                                             | If no `name` specified | Slugified `name` |
-| `dynamic`                       | Set `true` for a dynamic sensor.                                                 | boolean                                                                                            | no                     | `false`          |
-| `separator`                     | Separator between ID and value in the command output (only for dynamic sensors). | string                                                                                             | no                     |                  |
-| `value_template`                | [Template](https://www.home-assistant.io/docs/configuration/templating/)  to render the sensor value ([example](#uptime-in-days)).                | string                          | no                     |                  |
-| `command_set`                   | Command to set the sensor value (creates a controllable sensor).                 | string                                                                                             | no                     |                  |
-| `unit_of_measurement`           | The sensor unit.                                                                 | string                                                                                             | no                     |                  |
-| `suggested_unit_of_measurement` | The suggested unit of the entity.                                                | string                                                                                             | no                     |                  |
-| `suggested_display_precision`   | The suggested display precision of the entity.                                   | integer                                                                                            | no                     |                  |
-| `device_class`                  | The [device class](https://www.home-assistant.io/docs/configuration/customizing-devices/#device-class) of the entity.                                                  | string | no                     |                  |
-| `icon`                          | The icon of the entity.                                                          | string                                                                                             | no                     |                  |
-| `enabled`                       | Set `false` to disable the entity initially.                                     | boolean                                                                                            | no                     | `true`           |
+| Name                              | Description                                                                                                                       | Type    | Required               | Default          |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------- | ---------------- |
+| `type`                            | The sensor type (`text`, `number` or `binary`).                                                                                   | string  | yes                    |                  |
+| `name`                            | The name of the entity.                                                                                                           | string  | If no `key` specified  |                  |
+| `key`                             | The sensor key (can be used in commands).                                                                                         | string  | If no `name` specified | Slugified `name` |
+| `dynamic`                         | Set `true` to create a dynamic sensor.                                                                                            | boolean | no                     | `false`          |
+| `separator`                       | Separator between ID and value in the command output (only for dynamic sensors).                                                  | string  | no                     |                  |
+| `unit_of_measurement`             | The unit of the sensor value.                                                                                                     | string  | no                     |                  |
+| `value_template`                  | [Template](https://www.home-assistant.io/docs/configuration/templating/) to render the sensor value ([example](#uptime-in-days)). | string  | no                     |                  |
+| `command_set`                     | Command to set the sensor value (creates a controllable sensor).                                                                  | string  | no                     |                  |
+| `device_class`                    | The [device class](https://www.home-assistant.io/docs/configuration/customizing-devices/#device-class) of the entity.             | string  | no                     |                  |
+| `icon`                            | The icon of the entity.                                                                                                           | string  | no                     |                  |
+| `suggested_unit_of_measurement`   | The suggested unit of the entity.                                                                                                 | string  | no                     |                  |
+| `suggested_display_precision`     | The suggested display precision of the entity.                                                                                    | integer | no                     |                  |
+| `entity_registry_enabled_default` | Set `false` to disable the entity by default.                                                                                     | boolean | no                     | `true`           |
 
 #### Text type
 
-Sensors with `type: text` appear as sensor (not controllable), text (without `options`) or select entities in Home Assistant.
+Sensors with `type: text` appear as [sensor](https://www.home-assistant.io/integrations/sensor) (not controllable), [text](https://www.home-assistant.io/integrations/text) (without `options`) or [select](https://www.home-assistant.io/integrations/select) entities in Home Assistant.
 
 ##### Configuration
 
-| Name      | Description                                                         | Type    | Required | Default |
-| --------- | ------------------------------------------------------------------- | ------- | -------- | ------- |
-| `minimum` | The minimum length of the sensor value.                             | integer | no       | `0`     |
-| `maximum` | The maximum length of the sensor value.                             | integer | no       | `100`   |
-| `pattern` | A regex pattern that the sensor value has to match.                 | string  | no       |         |
-| `options` | A list of all possible sensor values (creates a select entity).     | list    | no       |         |
-| `mode`    | Display mode (only for text entities, can be `text` or `password`). | string  | no       | `text`  |
+| Name      | Description                                                                                                                                   | Type    | Required | Default |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------- | -------- | ------- |
+| `minimum` | The minimum length of the sensor value.                                                                                                       | integer | no       | `0`     |
+| `maximum` | The maximum length of the sensor value.                                                                                                       | integer | no       | `100`   |
+| `pattern` | A regex pattern that the sensor value has to match.                                                                                           | string  | no       |         |
+| `options` | A list of all possible sensor values (use with `command_set` to create a [select](https://www.home-assistant.io/integrations/select) entity). | list    | no       |         |
+| `mode`    | Display mode (only for text entities, can be `text` or `password`).                                                                           | string  | no       | `text`  |
 
 #### Number type
 
-Sensors with `type: number` appear as sensor (not controllable) or number entities in Home Assistant.
+Sensors with `type: number` appear as [sensor](https://www.home-assistant.io/integrations/sensor) (not controllable) or [number](https://www.home-assistant.io/integrations/number) entities in Home Assistant.
 
 ##### Configuration
 
@@ -173,7 +173,7 @@ Sensors with `type: number` appear as sensor (not controllable) or number entiti
 
 #### Binary type
 
-Sensors with `type: binary` appear as binary sensor (not controllable) or switch entities in Home Assistant.
+Sensors with `type: binary` appear as [binary sensor](https://www.home-assistant.io/integrations/binary_sensor) (not controllable) or [switch](https://www.home-assistant.io/integrations/switch) entities in Home Assistant.
 
 ##### Configuration
 
