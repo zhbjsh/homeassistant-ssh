@@ -2,7 +2,7 @@
 
 # SSH Integration for Home Assistant
 
-This custom integration allows you to control and monitor devices in Home Assistant by executing terminal commands via SSH. It uses the [paramiko](https://www.paramiko.org/) library and works in a similar way as the official [Command Line](https://www.home-assistant.io/integrations/command_line/#usage-of-templating-in-command) integration.
+This custom integration allows you to control and monitor devices in Home Assistant by executing terminal commands via SSH. It uses the [paramiko](https://www.paramiko.org) library and works in a similar way as the official [Command Line](https://www.home-assistant.io/integrations/command_line/#usage-of-templating-in-command) integration.
 
 ### Features
 
@@ -70,7 +70,7 @@ You can test new commands with the [`ssh.execute_command`](#execute-command-sshe
 
 ##### Include templates
 
-[Templates](https://www.home-assistant.io/docs/configuration/templating/) can be used in commands, same as with the [Command Line](https://www.home-assistant.io/integrations/command_line/#usage-of-templating-in-command) integration ([example](#send-the-weather-forecast)).
+[Templates](https://www.home-assistant.io/docs/configuration/templating) can be used in commands, same as with the [Command Line](https://www.home-assistant.io/integrations/command_line/#usage-of-templating-in-command) integration ([example](#send-the-weather-forecast)).
 
 ##### Include sensors
 
@@ -130,21 +130,21 @@ Both static and dynamic sensors can be made controllable by adding a `command_se
 
 ##### Configuration
 
-| Name                              | Description                                                                                                                       | Type    | Required               | Default          |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------- | ---------------- |
-| `type`                            | The sensor type (`text`, `number` or `binary`).                                                                                   | string  | yes                    |                  |
-| `name`                            | The name of the entity.                                                                                                           | string  | If no `key` specified  |                  |
-| `key`                             | The sensor key (can be used in commands).                                                                                         | string  | If no `name` specified | Slugified `name` |
-| `dynamic`                         | Set `true` to create a dynamic sensor.                                                                                            | boolean | no                     | `false`          |
-| `separator`                       | Separator between ID and value in the command output (only for dynamic sensors).                                                  | string  | no                     |                  |
-| `unit_of_measurement`             | The unit of the sensor value.                                                                                                     | string  | no                     |                  |
-| `value_template`                  | [Template](https://www.home-assistant.io/docs/configuration/templating/) to render the sensor value ([example](#uptime-in-days)). | string  | no                     |                  |
-| `command_set`                     | Command to set the sensor value (creates a controllable sensor).                                                                  | string  | no                     |                  |
-| `device_class`                    | The [device class](https://www.home-assistant.io/docs/configuration/customizing-devices/#device-class) of the entity.             | string  | no                     |                  |
-| `icon`                            | The icon of the entity.                                                                                                           | string  | no                     |                  |
-| `entity_registry_enabled_default` | Set `false` to disable the entity by default.                                                                                     | boolean | no                     | `true`           |
-| `suggested_unit_of_measurement`   | The suggested unit of the entity.                                                                                                 | string  | no                     |                  |
-| `suggested_display_precision`     | The suggested display precision of the entity.                                                                                    | integer | no                     |                  |
+| Name                              | Description                                                                                                                      | Type    | Required               | Default          |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------- | ---------------- |
+| `type`                            | The sensor type (`text`, `number` or `binary`).                                                                                  | string  | yes                    |                  |
+| `name`                            | The name of the entity.                                                                                                          | string  | If no `key` specified  |                  |
+| `key`                             | The sensor key (can be used in commands).                                                                                        | string  | If no `name` specified | Slugified `name` |
+| `dynamic`                         | Set `true` to create a dynamic sensor.                                                                                           | boolean | no                     | `false`          |
+| `separator`                       | Separator between ID and value in the command output (only for dynamic sensors).                                                 | string  | no                     |                  |
+| `unit_of_measurement`             | The unit of the sensor value.                                                                                                    | string  | no                     |                  |
+| `value_template`                  | [Template](https://www.home-assistant.io/docs/configuration/templating) to render the sensor value ([example](#uptime-in-days)). | string  | no                     |                  |
+| `command_set`                     | Command to set the sensor value (creates a controllable sensor).                                                                 | string  | no                     |                  |
+| `device_class`                    | The [device class](https://www.home-assistant.io/docs/configuration/customizing-devices/#device-class) of the entity.            | string  | no                     |                  |
+| `icon`                            | The icon of the entity.                                                                                                          | string  | no                     |                  |
+| `entity_registry_enabled_default` | Set `false` to disable the entity by default.                                                                                    | boolean | no                     | `true`           |
+| `suggested_unit_of_measurement`   | The suggested unit of the entity.                                                                                                | string  | no                     |                  |
+| `suggested_display_precision`     | The suggested display precision of the entity.                                                                                   | integer | no                     |                  |
 
 #### Text type
 
@@ -201,13 +201,13 @@ A simple action command that doesn't require variables.
 
 #### Send the weather forecast
 
-An example of a command that uses a [template](https://www.home-assistant.io/docs/configuration/templating/).
+An example of a command that uses a [template](https://www.home-assistant.io/docs/configuration/templating).
 
 ```yaml
 # Action command with template
 - command: echo 'Today will be {{ states("weather.forecast_home") }}' | mail -s "Weather" me@example.com
   name: Send weather forecast
-  icon: mdi:cloud-arrow-right
+  icon: mdi:weather-partly-cloudy
 ```
 
 #### Add a note to a file
@@ -281,7 +281,7 @@ This command returns the values of four sensors, each on a new line. The sensors
 
 ```yaml
 # Sensor command with multiple static sensors
-- command: lscpu | awk -F ': +' '/^CPU\(s\)|^Vendor|^Model name|^CPU max/ {print $2}'
+- command: 'lscpu | awk -F '': +'' ''/^CPU\(s\)|^Vendor|^Model name|^CPU max/ {print $2}'''
   sensors:
     - type: number
       name: CPU count
@@ -329,15 +329,16 @@ Example of a sensor command with dynamic sensor. Each line of the output contain
 
 ```yaml
 # Sensor command with dynamic sensor
-- command: ls -lp /mnt/backup/ | awk 'NR>1 && !/\// {print $NF "," $5}'
+- command: ls -lp /path/to/folder/ | awk 'NR>1 && !/\// {print $NF "," $5}'
   scan_interval: 600
   sensors:
     - type: number
-      name: Backup
+      key: file
       dynamic: true
       separator: ","
       unit_of_measurement: B
       suggested_unit_of_measurement: MB
+      suggested_display_precision: 3
       device_class: data_size
       icon: mdi:file
 ```
