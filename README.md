@@ -36,15 +36,15 @@ When connecting to the device, the integration looks for its host key in `~/.ssh
 
 ##### Default commands
 
-Choose the option that matches your device to have a set of default commands available right after setup. This will create some sensors (CPU load, free memory, temperature, etc.) and makes it possible to shutdown and restart the device. The default commands can be modified or deleted later.
+Choose the option that matches your device to have a set of default commands available after setup. This will create some sensors (CPU load, free memory, temperature, etc.) and makes it possible to shutdown and restart the device. The default commands can be modified or deleted later.
 
 ##### MAC address
 
-After connecting to the device, setup asks you to enter the MAC address of the device. Make sure the MAC address is correct, as it is used as unique ID of the device and to turn it on by Wake on LAN.
+After connecting to the device, setup asks you to enter the MAC address of the device. Make sure the MAC address is correct, as it is used as unique ID and to turn the device on by Wake on LAN.
 
 ##### Name
 
-Enter a name for the device to complete the setup. The name is used internally to generate entity IDs and can not be changed later.
+Enter a name for the device to complete the setup. The name is used to generate entity IDs and can not be changed later.
 
 ## Device configuration
 
@@ -58,11 +58,15 @@ To avoid unintentional shutdowns, this function is disabled by default. After en
 
 The update interval is the time in seconds between updates of the device state. If the device disconnects (shown by the _SSH Status_ sensor), the integration will try to reconnect to it as long as it replies to ping requests (shown by the _Network Status_ sensor).
 
+##### Command timeout
+
+The command timeout is the time in seconds that the integration waits for a command to complete. Generally commands should be short (maximum a couple seconds), as they are executed one after another and block the next command while they are running.
+
 ### Commands
 
-[Action commands](#action-commands) and [sensor commands](#sensor-commands) of the device can be edited inside the configuration window. The default commands selected during setup will show up here. You can modify them, delete them or add new commands. Be careful when deleting commands, as all entities created by them will become unavailable.
+[Action commands](#action-commands) and [sensor commands](#sensor-commands) of the device can be edited in the configuration window. This is where the default commands from the setup will show up. You can modify them, delete them or add new commands. Be careful when deleting commands, as all entities created by them will become unavailable.
 
-You can test new commands with the [`ssh.execute_command`](#execute-command-sshexecute_command) service in the developer tools, where the service response shows the command output.
+You can test new commands with the [`ssh.execute_command`](#execute-command-sshexecute_command) service in the developer tools, where the service response will show you the output.
 
 ##### Include templates
 
@@ -75,10 +79,6 @@ Sensors of the same device can be accessed in commands with `&{my_sensor_key}`. 
 ##### Include variables
 
 Variables can be passed to action commands (but not sensor commands) and accessed with `@{my_variable_name}`. Action commands that require variables can only be executed by calling the [`ssh.run_action`](#run-action-sshrun_action) service ([example](#add-a-note-to-a-file)).
-
-##### Timeout
-
-The command timeout is the time in seconds that the integration waits for a command to complete. Generally commands should be short (maximum a couple seconds), as they are executed one after another and block the next command while they are running.
 
 ##### Configuration
 
