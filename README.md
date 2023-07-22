@@ -1,4 +1,6 @@
-# SSH Integration for Home Assistant
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+
+# SSH Integration for Home Assistant 
 
 This custom integration allows you to control and monitor devices in Home Assistant by executing terminal commands via SSH.
 
@@ -95,7 +97,7 @@ Action commands are executed manually by pressing a button or calling the [`ssh.
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------- | ---------------- |
 | `name`                            | The name of the entity.                                                                                               | string  | If no `key` specified  |                  |
 | `key`                             | The action key (can be used with [`ssh.run_action`](#run-action-sshrun_action)).                                      | string  | If no `name` specified | Slugified `name` |
-| `device_class`                    | The [device class](https://www.home-assistant.io/docs/configuration/customizing-devices/#device-class) of the entity. | no      |                        |
+| `device_class`                    | The [device class](https://www.home-assistant.io/docs/configuration/customizing-devices/#device-class) of the entity. | string  | no                     |
 | `icon`                            | The icon of the entity.                                                                                               | string  | no                     |                  |
 | `entity_registry_enabled_default` | Set `false` to disable the entity by default.                                                                         | boolean | no                     | `true`           |
 
@@ -140,9 +142,9 @@ Both static and dynamic sensors can be made controllable by adding a `command_se
 | `command_set`                     | Command to set the sensor value (creates a controllable sensor).                                                                  | string  | no                     |                  |
 | `device_class`                    | The [device class](https://www.home-assistant.io/docs/configuration/customizing-devices/#device-class) of the entity.             | string  | no                     |                  |
 | `icon`                            | The icon of the entity.                                                                                                           | string  | no                     |                  |
+| `entity_registry_enabled_default` | Set `false` to disable the entity by default.                                                                                     | boolean | no                     | `true`           |
 | `suggested_unit_of_measurement`   | The suggested unit of the entity.                                                                                                 | string  | no                     |                  |
 | `suggested_display_precision`     | The suggested display precision of the entity.                                                                                    | integer | no                     |                  |
-| `entity_registry_enabled_default` | Set `false` to disable the entity by default.                                                                                     | boolean | no                     | `true`           |
 
 #### Text type
 

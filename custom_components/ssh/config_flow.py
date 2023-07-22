@@ -137,6 +137,30 @@ def validate_sensor(data: dict) -> dict:
     raise ValueError("Invalid sensor type")
 
 
+COMMAND_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_COMMAND): str,
+        vol.Optional(CONF_TIMEOUT): int,
+    }
+)
+
+ACTION_COMMAND_SCHEMA = COMMAND_SCHEMA.extend(
+    {
+        vol.Optional(CONF_NAME): str,
+        vol.Optional(CONF_KEY): str,
+        vol.Optional(CONF_DEVICE_CLASS): BUTTON_DEVICE_CLASSES_SCHEMA,
+        vol.Optional(CONF_ICON): str,
+        vol.Optional(CONF_ENTITY_REGISTRY_ENABLED_DEFAULT): bool,
+    }
+)
+
+SENSOR_COMMAND_SCHEMA = COMMAND_SCHEMA.extend(
+    {
+        vol.Optional(CONF_SCAN_INTERVAL): int,
+        vol.Required(CONF_SENSORS): vol.Schema([validate_sensor]),
+    }
+)
+
 SENSOR_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_TYPE): vol.Any("text", "number", "binary", "placeholder"),
@@ -147,11 +171,11 @@ SENSOR_SCHEMA = vol.Schema(
         vol.Optional(CONF_UNIT_OF_MEASUREMENT): str,
         vol.Optional(CONF_VALUE_TEMPLATE): str,
         vol.Optional(CONF_COMMAND_SET): str,
-        vol.Optional(CONF_SUGGESTED_UNIT_OF_MEASUREMENT): str,
-        vol.Optional(CONF_SUGGESTED_DISPLAY_PRECISION): int,
         vol.Optional(CONF_DEVICE_CLASS): SENSOR_DEVICE_CLASSES_SCHEMA,
         vol.Optional(CONF_ICON): str,
         vol.Optional(CONF_ENTITY_REGISTRY_ENABLED_DEFAULT): bool,
+        vol.Optional(CONF_SUGGESTED_UNIT_OF_MEASUREMENT): str,
+        vol.Optional(CONF_SUGGESTED_DISPLAY_PRECISION): int,
     }
 )
 
@@ -180,8 +204,8 @@ NUMBER_SENSOR_SCHEMA = SENSOR_SCHEMA.extend(
 
 CONTROLLABLE_NUMBER_SENSOR_SCHEMA = NUMBER_SENSOR_SCHEMA.extend(
     {
-        vol.Optional(CONF_MODE): vol.All(vol.Lower, vol.Coerce(NumberMode)),
         vol.Optional(CONF_DEVICE_CLASS): NUMBER_DEVICE_CLASSES_SCHEMA,
+        vol.Optional(CONF_MODE): vol.All(vol.Lower, vol.Coerce(NumberMode)),
     }
 )
 
@@ -198,30 +222,6 @@ BINARY_SENSOR_SCHEMA = SENSOR_SCHEMA.extend(
 CONTROLLABLE_BINARY_SENSOR_SCHEMA = BINARY_SENSOR_SCHEMA.extend(
     {
         vol.Optional(CONF_DEVICE_CLASS): SWITCH_DEVICE_CLASSES_SCHEMA,
-    }
-)
-
-COMMAND_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_COMMAND): str,
-        vol.Optional(CONF_TIMEOUT): int,
-    }
-)
-
-ACTION_COMMAND_SCHEMA = COMMAND_SCHEMA.extend(
-    {
-        vol.Optional(CONF_NAME): str,
-        vol.Optional(CONF_KEY): str,
-        vol.Optional(CONF_DEVICE_CLASS): BUTTON_DEVICE_CLASSES_SCHEMA,
-        vol.Optional(CONF_ICON): str,
-        vol.Optional(CONF_ENTITY_REGISTRY_ENABLED_DEFAULT): bool,
-    }
-)
-
-SENSOR_COMMAND_SCHEMA = COMMAND_SCHEMA.extend(
-    {
-        vol.Optional(CONF_SCAN_INTERVAL): int,
-        vol.Required(CONF_SENSORS): vol.Schema([validate_sensor]),
     }
 )
 
