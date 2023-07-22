@@ -1,12 +1,12 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
-# SSH Integration for Home Assistant 
+# SSH Integration for Home Assistant
 
-This custom integration allows you to control and monitor devices in Home Assistant by executing terminal commands via SSH.
+This custom integration allows you to control and monitor devices in Home Assistant by executing terminal commands via SSH. It uses the [paramiko](https://www.paramiko.org/) library and works in a similar way as the official [Command Line](https://www.home-assistant.io/integrations/command_line/#usage-of-templating-in-command) integration.
 
 ### Features
 
-- Login with username/password or key file.
+- SSH authentication with username/password or key file.
 - Connect to multiple devices at the same time.
 - Generate sensor, binary sensor, text, select, number and switch entities.
 - Default commands for Linux and Windows included and available without configuration.
@@ -70,7 +70,7 @@ You can test new commands with the [`ssh.execute_command`](#execute-command-sshe
 
 ##### Include sensors
 
-Sensors of the same device can be accessed in commands with `#{my_sensor_key}`. The integration will poll the required sensors once before every execution and include their values in the command ([example]()).
+Sensors of the same device can be accessed in commands with `&{my_sensor_key}`. The integration will poll the required sensors once before every execution and include their values in the command ([example](#ip-address)).
 
 ##### Include variables
 
@@ -212,7 +212,7 @@ An example of a command that uses a [template](https://www.home-assistant.io/doc
 
 #### Add a note to a file
 
-This command includes a variable. To execute it, [`ssh.run_action`]() has to be called with the key `add_note` and a value for `note`.
+This command includes a variable. To execute it, [`ssh.run_action`](#run-action-sshrun_action) has to be called with the key `add_note` and a value for `note`.
 
 ```yaml
 # Action command with variable
@@ -222,7 +222,7 @@ This command includes a variable. To execute it, [`ssh.run_action`]() has to be 
 
 #### Number of logged in users
 
-A simple sensor command with one static sensor. The command returns a number on the first output line, which will be the value of the sensor.
+A simple sensor command with one static sensor. The command returns a number on the first line, which will be the value of the sensor.
 
 ```yaml
 # Sensor command with static sensor
@@ -241,7 +241,7 @@ A simple sensor command with one static sensor. The command returns a number on 
 
 #### Uptime in days
 
-This sensor uses a `value_template` to transform the command output from seconds to days.
+In this command, the sensor uses a `value_template` to transform the command output from seconds to days.
 
 ```yaml
 # Sensor command with static sensor and value template
@@ -256,6 +256,23 @@ This sensor uses a `value_template` to transform the command output from seconds
 ```shell
 # Example output
 248938.30
+```
+
+#### IP address
+
+This sensor command includes the value of another sensor with the key `network_interface`.
+
+```yaml
+# Sensor command with static sensor and value of another sensor
+- command: ip addr show &{network_interface} | awk '/inet/ {print $2}' | cut -f1  -d'/'
+  sensors:
+    - type: text
+      name: IP address
+```
+
+```shell
+# Example output
+192.168.0.123
 ```
 
 #### CPU information
