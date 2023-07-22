@@ -135,12 +135,12 @@ Both static and dynamic sensors can be made controllable by adding a `command_se
 | `key`                           | The sensor key (can be included in commands).                                    | string                                                                                             | If no `name` specified | Slugified `name` |
 | `dynamic`                       | Set `true` for a dynamic sensor.                                                 | boolean                                                                                            | no                     | `false`          |
 | `separator`                     | Separator between ID and value in the command output (only for dynamic sensors). | string                                                                                             | no                     |                  |
-| `value_template`                | Template to render the sensor value ([example](#uptime-in-days)).                | [template](https://www.home-assistant.io/docs/configuration/templating/)                           | no                     |                  |
+| `value_template`                | [Template](https://www.home-assistant.io/docs/configuration/templating/)  to render the sensor value ([example](#uptime-in-days)).                | string                          | no                     |                  |
 | `command_set`                   | Command to set the sensor value (creates a controllable sensor).                 | string                                                                                             | no                     |                  |
 | `unit_of_measurement`           | The sensor unit.                                                                 | string                                                                                             | no                     |                  |
 | `suggested_unit_of_measurement` | The suggested unit of the entity.                                                | string                                                                                             | no                     |                  |
 | `suggested_display_precision`   | The suggested display precision of the entity.                                   | integer                                                                                            | no                     |                  |
-| `device_class`                  | The device class of the entity.                                                  | [device_class](https://www.home-assistant.io/docs/configuration/customizing-devices/#device-class) | no                     |                  |
+| `device_class`                  | The [device class](https://www.home-assistant.io/docs/configuration/customizing-devices/#device-class) of the entity.                                                  | string | no                     |                  |
 | `icon`                          | The icon of the entity.                                                          | string                                                                                             | no                     |                  |
 | `enabled`                       | Set `false` to disable the entity initially.                                     | boolean                                                                                            | no                     | `true`           |
 
@@ -192,9 +192,9 @@ A simple action command that doesn't require variables.
 
 ```yaml
 # Action command
-command: ~/script.sh
-name: Execute my script
-icon: mdi:script-text-play
+- command: ~/script.sh
+  name: Execute my script
+  icon: mdi:script-text-play
 ```
 
 #### Send the weather forecast
@@ -203,9 +203,9 @@ An example of a command that uses a [template](https://www.home-assistant.io/doc
 
 ```yaml
 # Action command with template
-command: echo 'Today will be {{ states("weather.forecast_home") }}' | mail -s "Weather" me@example.com
-name: Send weather forecast
-icon: mdi:cloud-arrow-right
+- command: echo 'Today will be {{ states("weather.forecast_home") }}' | mail -s "Weather" me@example.com
+  name: Send weather forecast
+  icon: mdi:cloud-arrow-right
 ```
 
 #### Add a note to a file
@@ -214,8 +214,8 @@ This command includes a variable. To execute it, [`ssh.run_action`]() has to be 
 
 ```yaml
 # Action command with variable
-command: echo '@{note}' >> ~/notes.txt
-key: add_note
+- command: echo '@{note}' >> ~/notes.txt
+  key: add_note
 ```
 
 #### Number of logged in users
@@ -224,12 +224,12 @@ A simple sensor command with one static sensor. The command returns a number on 
 
 ```yaml
 # Sensor command with static sensor
-command: who --count | awk -F "=" 'NR>1 {print $2}'
-scan_interval: 60
-sensors:
-  - type: number
-    name: Logged in users
-    icon: mdi:account-multiple
+- command: who --count | awk -F "=" 'NR>1 {print $2}'
+  scan_interval: 60
+  sensors:
+    - type: number
+      name: Logged in users
+      icon: mdi:account-multiple
 ```
 
 ```shell
@@ -243,12 +243,12 @@ This sensor uses a `value_template` to transform the command output from seconds
 
 ```yaml
 # Sensor command with static sensor and value template
-command: cat /proc/uptime | awk '{print $1}'
-sensors:
-  - type: number
-    name: Uptime
-    unit_of_measurement: d
-    value_template: "{{ value | float  // 86400 }}"
+- command: cat /proc/uptime | awk '{print $1}'
+  sensors:
+    - type: number
+      name: Uptime
+      unit_of_measurement: d
+      value_template: "{{ value | float  // 86400 }}"
 ```
 
 ```shell
@@ -262,16 +262,16 @@ This command returns the values of four sensors, each on a new line. The sensors
 
 ```yaml
 # Sensor command with multiple static sensors
-command: lscpu | awk -F ': +' '/^CPU\(s\)|^Vendor|^Model name|^CPU max/ {print $2}'
-sensors:
-  - type: number
-    name: CPU count
-  - type: text
-    name: CPU vendor
-  - type: text
-    name: CPU model
-  - type: number
-    name: CPU MHz max.
+- command: lscpu | awk -F ': +' '/^CPU\(s\)|^Vendor|^Model name|^CPU max/ {print $2}'
+  sensors:
+    - type: number
+      name: CPU count
+    - type: text
+      name: CPU vendor
+    - type: text
+      name: CPU model
+    - type: number
+      name: CPU MHz max.
 ```
 
 ```shell
@@ -288,15 +288,15 @@ This command returns the current value of the `log_level` setting in a config fi
 
 ```yaml
 # Sensor command with controllable static sensor
-command: cat /etc/app.conf | awk -F "=" '/^log_level/ {print $2}'
-sensors:
-  - type: text
-    name: Log level
-    command_set: sed -i "s|^log_level=.*|log_level=@{value}|" /etc/app.conf
-    options:
-      - warning
-      - info
-      - debug
+- command: cat /etc/app.conf | awk -F "=" '/^log_level/ {print $2}'
+  sensors:
+    - type: text
+      name: Log level
+      command_set: sed -i "s|^log_level=.*|log_level=@{value}|" /etc/app.conf
+      options:
+        - warning
+        - info
+        - debug
 ```
 
 ```shell
@@ -310,17 +310,17 @@ Example of a sensor command with dynamic sensor. Each line of the output contain
 
 ```yaml
 # Sensor command with dynamic sensor
-command: ls -lp /mnt/backup/ | awk 'NR>1 && !/\// {print $NF "," $5}'
-scan_interval: 600
-sensors:
-  - type: number
-    name: Backup
-    dynamic: true
-    separator: ","
-    unit_of_measurement: B
-    suggested_unit_of_measurement: MB
-    device_class: data_size
-    icon: mdi:file
+- command: ls -lp /mnt/backup/ | awk 'NR>1 && !/\// {print $NF "," $5}'
+  scan_interval: 600
+  sensors:
+    - type: number
+      name: Backup
+      dynamic: true
+      separator: ","
+      unit_of_measurement: B
+      suggested_unit_of_measurement: MB
+      device_class: data_size
+      icon: mdi:file
 ```
 
 ```shell
@@ -336,16 +336,16 @@ Dynamic sensors can be controllable as well. This command returns name and statu
 
 ```yaml
 # Sensor command with controllable dynamic sensor
-command: systemctl -a | awk '/bluetooth.service|smbd.service/ {print $1 "," $4}'
-scan_interval: 300
-sensors:
-  - type: binary
-    key: service
-    dynamic: true
-    separator: ","
-    command_on: systemctl start @{id}
-    command_off: systemctl stop @{id}
-    payload_on: running
+- command: systemctl -a | awk '/bluetooth.service|smbd.service/ {print $1 "," $4}'
+  scan_interval: 300
+  sensors:
+    - type: binary
+      key: service
+      dynamic: true
+      separator: ","
+      command_on: systemctl start @{id}
+      command_off: systemctl stop @{id}
+      payload_on: running
 ```
 
 ```shell
