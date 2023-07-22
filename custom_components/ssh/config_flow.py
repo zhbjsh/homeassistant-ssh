@@ -20,13 +20,29 @@ from ssh_terminal_manager import (
 )
 
 from homeassistant import config_entries
+from homeassistant.components.binary_sensor import (
+    DEVICE_CLASSES_SCHEMA as BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
+)
+from homeassistant.components.button import (
+    DEVICE_CLASSES_SCHEMA as BUTTON_DEVICE_CLASSES_SCHEMA,
+)
+from homeassistant.components.number import (
+    DEVICE_CLASSES_SCHEMA as NUMBER_DEVICE_CLASSES_SCHEMA,
+)
+from homeassistant.components.number import NumberMode
+from homeassistant.components.sensor import (
+    DEVICE_CLASSES_SCHEMA as SENSOR_DEVICE_CLASSES_SCHEMA,
+)
+from homeassistant.components.switch import (
+    DEVICE_CLASSES_SCHEMA as SWITCH_DEVICE_CLASSES_SCHEMA,
+)
+from homeassistant.components.text import TextMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_COMMAND,
     CONF_COMMAND_OFF,
     CONF_COMMAND_ON,
     CONF_DEVICE_CLASS,
-    CONF_ENABLED,
     CONF_HOST,
     CONF_ICON,
     CONF_MAC,
@@ -65,6 +81,7 @@ from .const import (
     CONF_COMMAND_TIMEOUT,
     CONF_DEFAULT_COMMANDS,
     CONF_DYNAMIC,
+    CONF_ENTITY_REGISTRY_ENABLED_DEFAULT,
     CONF_FLOAT,
     CONF_HOST_KEYS_FILENAME,
     CONF_KEY,
@@ -90,9 +107,39 @@ _LOGGER = logging.getLogger(__name__)
 DEFAULT_UPDATE_INTERVAL = 30
 DEFAULT_HOST_KEYS_FILENAME = "known_hosts"
 
+
+def validate_sensor(data: dict) -> dict:
+    sensor_type = data[CONF_TYPE]
+    controllable = (
+        data.get(CONF_COMMAND_SET)
+        or data.get(CONF_COMMAND_ON)
+        and data.get(CONF_COMMAND_OFF)
+    )
+
+    if sensor_type == "text":
+        if not controllable:
+            return TEXT_SENSOR_SCHEMA(data)
+        return CONTROLLABLE_TEXT_SENSOR_SCHEMA(data)
+
+    if sensor_type == "number":
+        if not controllable:
+            return NUMBER_SENSOR_SCHEMA(data)
+        return CONTROLLABLE_NUMBER_SENSOR_SCHEMA(data)
+
+    if sensor_type == "binary":
+        if not controllable:
+            return BINARY_SENSOR_SCHEMA(data)
+        return CONTROLLABLE_BINARY_SENSOR_SCHEMA(data)
+
+    if sensor_type == "placeholder":
+        return data
+
+    raise ValueError("Invalid sensor type")
+
+
 SENSOR_SCHEMA = vol.Schema(
     {
-        vol.Optional(CONF_TYPE): str,
+        vol.Required(CONF_TYPE): vol.Any("text", "number", "binary", "placeholder"),
         vol.Optional(CONF_NAME): str,
         vol.Optional(CONF_KEY): str,
         vol.Optional(CONF_DYNAMIC): bool,
@@ -102,40 +149,55 @@ SENSOR_SCHEMA = vol.Schema(
         vol.Optional(CONF_COMMAND_SET): str,
         vol.Optional(CONF_SUGGESTED_UNIT_OF_MEASUREMENT): str,
         vol.Optional(CONF_SUGGESTED_DISPLAY_PRECISION): int,
-        vol.Optional(CONF_DEVICE_CLASS): str,
+        vol.Optional(CONF_DEVICE_CLASS): SENSOR_DEVICE_CLASSES_SCHEMA,
         vol.Optional(CONF_ICON): str,
-        vol.Optional(CONF_ENABLED): bool,
+        vol.Optional(CONF_ENTITY_REGISTRY_ENABLED_DEFAULT): bool,
     }
 )
 
 TEXT_SENSOR_SCHEMA = SENSOR_SCHEMA.extend(
     {
-        vol.Required(CONF_TYPE): "text",
         vol.Optional(CONF_MINIMUM): int,
         vol.Optional(CONF_MAXIMUM): int,
         vol.Optional(CONF_PATTERN): str,
         vol.Optional(CONF_OPTIONS): list,
-        vol.Optional(CONF_MODE): str,
+    }
+)
+
+CONTROLLABLE_TEXT_SENSOR_SCHEMA = TEXT_SENSOR_SCHEMA.extend(
+    {
+        vol.Optional(CONF_MODE): vol.All(vol.Lower, vol.Coerce(TextMode)),
     }
 )
 
 NUMBER_SENSOR_SCHEMA = SENSOR_SCHEMA.extend(
     {
-        vol.Required(CONF_TYPE): "number",
         vol.Optional(CONF_FLOAT): bool,
         vol.Optional(CONF_MINIMUM): vol.Coerce(float),
         vol.Optional(CONF_MAXIMUM): vol.Coerce(float),
-        vol.Optional(CONF_MODE): str,
+    }
+)
+
+CONTROLLABLE_NUMBER_SENSOR_SCHEMA = NUMBER_SENSOR_SCHEMA.extend(
+    {
+        vol.Optional(CONF_MODE): vol.All(vol.Lower, vol.Coerce(NumberMode)),
+        vol.Optional(CONF_DEVICE_CLASS): NUMBER_DEVICE_CLASSES_SCHEMA,
     }
 )
 
 BINARY_SENSOR_SCHEMA = SENSOR_SCHEMA.extend(
     {
-        vol.Required(CONF_TYPE): "binary",
         vol.Optional(CONF_COMMAND_ON): str,
         vol.Optional(CONF_COMMAND_OFF): str,
         vol.Optional(CONF_PAYLOAD_ON): str,
         vol.Optional(CONF_PAYLOAD_OFF): str,
+        vol.Optional(CONF_DEVICE_CLASS): BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
+    }
+)
+
+CONTROLLABLE_BINARY_SENSOR_SCHEMA = BINARY_SENSOR_SCHEMA.extend(
+    {
+        vol.Optional(CONF_DEVICE_CLASS): SWITCH_DEVICE_CLASSES_SCHEMA,
     }
 )
 
@@ -150,24 +212,16 @@ ACTION_COMMAND_SCHEMA = COMMAND_SCHEMA.extend(
     {
         vol.Optional(CONF_NAME): str,
         vol.Optional(CONF_KEY): str,
-        vol.Optional(CONF_DEVICE_CLASS): str,
+        vol.Optional(CONF_DEVICE_CLASS): BUTTON_DEVICE_CLASSES_SCHEMA,
         vol.Optional(CONF_ICON): str,
-        vol.Optional(CONF_ENABLED): bool,
+        vol.Optional(CONF_ENTITY_REGISTRY_ENABLED_DEFAULT): bool,
     }
 )
 
 SENSOR_COMMAND_SCHEMA = COMMAND_SCHEMA.extend(
     {
         vol.Optional(CONF_SCAN_INTERVAL): int,
-        vol.Required(CONF_SENSORS): vol.Schema(
-            [
-                vol.Any(
-                    TEXT_SENSOR_SCHEMA,
-                    NUMBER_SENSOR_SCHEMA,
-                    BINARY_SENSOR_SCHEMA,
-                )
-            ]
-        ),
+        vol.Required(CONF_SENSORS): vol.Schema([validate_sensor]),
     }
 )
 
@@ -186,7 +240,7 @@ DEFAULT_COMMANDS_SELECTOR = SelectSelector(
 )
 
 
-async def validate_name(hass: HomeAssistant, name: str):
+async def validate_name(hass: HomeAssistant, name: str) -> str:
     """Validate the name doesn't exist yet."""
     name = name.strip()
 
@@ -197,7 +251,7 @@ async def validate_name(hass: HomeAssistant, name: str):
     return name
 
 
-def validate_mac_address(mac_address: str):
+def validate_mac_address(mac_address: str) -> str:
     """Validate the mac address has the correct format."""
     mac_address = mac_address.strip().lower()
 

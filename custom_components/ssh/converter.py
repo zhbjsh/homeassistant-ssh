@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from ssh_terminal_manager import (
+    PLACEHOLDER_KEY,
     ActionCommand,
     ActionKey,
     BinarySensor,
@@ -22,7 +23,6 @@ from homeassistant.const import (
     CONF_COMMAND_OFF,
     CONF_COMMAND_ON,
     CONF_DEVICE_CLASS,
-    CONF_ENABLED,
     CONF_ICON,
     CONF_MAXIMUM,
     CONF_MINIMUM,
@@ -42,6 +42,7 @@ from .const import (
     CONF_ACTION_COMMANDS,
     CONF_COMMAND_SET,
     CONF_DYNAMIC,
+    CONF_ENTITY_REGISTRY_ENABLED_DEFAULT,
     CONF_FLOAT,
     CONF_KEY,
     CONF_OPTIONS,
@@ -57,7 +58,7 @@ from .helpers import get_command_renderer, get_value_renderer
 ACTION_ATTRIBUTE_KEYS = (
     CONF_DEVICE_CLASS,
     CONF_ICON,
-    CONF_ENABLED,
+    CONF_ENTITY_REGISTRY_ENABLED_DEFAULT,
 )
 
 SENSOR_ATTRIBUTE_KEYS = (
@@ -66,7 +67,7 @@ SENSOR_ATTRIBUTE_KEYS = (
     CONF_MODE,
     CONF_DEVICE_CLASS,
     CONF_ICON,
-    CONF_ENABLED,
+    CONF_ENTITY_REGISTRY_ENABLED_DEFAULT,
 )
 
 DEFAULT_ACTION_ATTRIBUTES: dict[str, dict] = {
@@ -75,19 +76,19 @@ DEFAULT_ACTION_ATTRIBUTES: dict[str, dict] = {
 
 DEFAULT_SENSOR_ATTRIBUTES: dict[str, dict] = {
     SensorKey.NETWORK_INTERFACE: {CONF_ICON: "mdi:wan"},
-    SensorKey.MAC_ADDRESS: {CONF_ENABLED: False},
-    SensorKey.WAKE_ON_LAN: {CONF_ENABLED: False},
-    SensorKey.MACHINE_TYPE: {CONF_ENABLED: False},
-    SensorKey.HOSTNAME: {CONF_ENABLED: False},
-    SensorKey.OS_NAME: {CONF_ENABLED: False},
-    SensorKey.OS_VERSION: {CONF_ENABLED: False},
-    SensorKey.OS_ARCHITECTURE: {CONF_ENABLED: False},
+    SensorKey.MAC_ADDRESS: {CONF_ENTITY_REGISTRY_ENABLED_DEFAULT: False},
+    SensorKey.WAKE_ON_LAN: {CONF_ENTITY_REGISTRY_ENABLED_DEFAULT: False},
+    SensorKey.MACHINE_TYPE: {CONF_ENTITY_REGISTRY_ENABLED_DEFAULT: False},
+    SensorKey.HOSTNAME: {CONF_ENTITY_REGISTRY_ENABLED_DEFAULT: False},
+    SensorKey.OS_NAME: {CONF_ENTITY_REGISTRY_ENABLED_DEFAULT: False},
+    SensorKey.OS_VERSION: {CONF_ENTITY_REGISTRY_ENABLED_DEFAULT: False},
+    SensorKey.OS_ARCHITECTURE: {CONF_ENTITY_REGISTRY_ENABLED_DEFAULT: False},
     SensorKey.TOTAL_MEMORY: {
         CONF_SUGGESTED_UNIT_OF_MEASUREMENT: "MB",
         CONF_SUGGESTED_DISPLAY_PRECISION: 0,
         CONF_DEVICE_CLASS: SensorDeviceClass.DATA_SIZE,
         CONF_ICON: "mdi:memory",
-        CONF_ENABLED: False,
+        CONF_ENTITY_REGISTRY_ENABLED_DEFAULT: False,
     },
     SensorKey.FREE_MEMORY: {
         CONF_SUGGESTED_UNIT_OF_MEASUREMENT: "MB",
@@ -266,7 +267,7 @@ def get_sensor_command_config(command: SensorCommand) -> dict:
                 if isinstance(sensor, NumberSensor)
                 else get_binary_sensor_config(sensor)
                 if isinstance(sensor, BinarySensor)
-                else {"key": "_"}
+                else {CONF_TYPE: "placeholder"}
                 for sensor in command.sensors
             ],
         }
@@ -279,12 +280,12 @@ def get_sensor_command_kwargs(hass: HomeAssistant, data: dict) -> dict:
         "interval": data.get(CONF_SCAN_INTERVAL),
         "sensors": [
             TextSensor(**get_text_sensor_kwargs(hass, sensor_data))
-            if sensor_data.get(CONF_TYPE) == "text"
+            if sensor_data[CONF_TYPE] == "text"
             else NumberSensor(**get_number_sensor_kwargs(hass, sensor_data))
-            if sensor_data.get(CONF_TYPE) == "number"
+            if sensor_data[CONF_TYPE] == "number"
             else BinarySensor(**get_binary_sensor_kwargs(hass, sensor_data))
-            if sensor_data.get(CONF_TYPE) == "binary"
-            else Sensor(key="_")
+            if sensor_data[CONF_TYPE] == "binary"
+            else Sensor(key=PLACEHOLDER_KEY)
             for sensor_data in data[CONF_SENSORS]
         ],
     }

@@ -3,12 +3,12 @@ from typing import Any
 from ssh_terminal_manager import ActionCommand, Sensor, State
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DEVICE_CLASS, CONF_ENABLED, CONF_ICON
+from homeassistant.const import CONF_DEVICE_CLASS, CONF_ICON
 from homeassistant.helpers.entity import DeviceInfo, generate_entity_id
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
-from .const import DOMAIN
+from .const import CONF_ENTITY_REGISTRY_ENABLED_DEFAULT, DOMAIN
 from .coordinator import StateCoordinator
 
 
@@ -65,7 +65,7 @@ class BaseEntity(CoordinatorEntity):
 
     @property
     def entity_registry_enabled_default(self) -> bool:
-        return self._attributes.get(CONF_ENABLED, True)
+        return self._attributes.get(CONF_ENTITY_REGISTRY_ENABLED_DEFAULT, True)
 
     def _handle_manager_state_change(self, state: State) -> None:
         self.schedule_update_ha_state()
