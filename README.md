@@ -20,7 +20,13 @@ This custom integration allows you to control and monitor devices in Home Assist
 
 ## Installation
 
-Download the [latest release](https://github.com/zhbjsh/homeassistant-ssh/releases/latest) and copy the `custom_components/ssh` folder from the zip file to `config/custom_components/` on your Home Assistant installation.
+##### From HACS
+
+Install [HACS](https://hacs.xyz/docs/setup/download) and open it in Home Assistant. Select _Integrations_ and add a custom repository by clicking on the three dots on the top right corner. Enter `https://github.com/zhbjsh/homeassistant-ssh` as _Repository_ and select _Integration_ as _Category_. You can now search for the _SSH_ integration and download it.
+
+##### From Github
+
+Download the [latest release](https://github.com/zhbjsh/homeassistant-ssh/releases/latest) and copy the `custom_components/ssh` folder from the zip file to `config/custom_components/` on your Home Assistant installation. Don't forget to restart Home Assistant after you're done.
 
 ## Device setup
 
