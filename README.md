@@ -333,7 +333,7 @@ Example of a sensor command with dynamic sensor. Each line of the output contain
   scan_interval: 600
   sensors:
     - type: number
-      key: file
+      name: File
       dynamic: true
       separator: ","
       unit_of_measurement: B
