@@ -7,6 +7,18 @@ from collections.abc import Mapping
 from typing import Any
 
 import voluptuous as vol
+from ssh_terminal_manager import (
+    DEFAULT_ADD_HOST_KEYS,
+    DEFAULT_PORT,
+    Collection,
+    OfflineError,
+    SSHAuthenticationError,
+    SSHConnectError,
+    SSHHostKeyUnknownError,
+    SSHManager,
+    default_collections,
+)
+
 from homeassistant import config_entries
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA as BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
@@ -60,17 +72,6 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
 )
 from homeassistant.util import slugify
-from ssh_terminal_manager import (
-    DEFAULT_ADD_HOST_KEYS,
-    DEFAULT_PORT,
-    Collection,
-    OfflineError,
-    SSHAuthenticationError,
-    SSHConnectError,
-    SSHHostKeyUnknownError,
-    SSHManager,
-    default_collections,
-)
 
 from .const import (
     CONF_ACTION_COMMANDS,

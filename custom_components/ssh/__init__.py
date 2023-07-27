@@ -102,54 +102,13 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await async_setup_entry(hass, entry)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up SSH from a config entry."""
-    data = entry.data
-    options = entry.options
-
-    manager = SSHManager(
-        data[CONF_HOST],
-        name=data[CONF_NAME],
-        port=data[CONF_PORT],
-        username=data.get(CONF_USERNAME),
-        password=data.get(CONF_PASSWORD),
-        key_filename=data.get(CONF_KEY_FILENAME),
-        host_keys_filename=data.get(CONF_HOST_KEYS_FILENAME),
-        allow_turn_off=options[CONF_ALLOW_TURN_OFF],
-        command_timeout=options[CONF_COMMAND_TIMEOUT],
-        collection=get_collection(hass, options),
-        logger=_LOGGER,
-    )
-
-    manager.set_mac_address(data[CONF_MAC])
-
-    state_coordinator = StateCoordinator(hass, manager, options[CONF_UPDATE_INTERVAL])
-
-    command_coordinators = [
-        SensorCommandCoordinator(hass, manager, command)
-        for command in manager.sensor_commands
-        if command.interval
-    ]
-
-    entry_data = EntryData(manager, state_coordinator, command_coordinators)
-
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = entry_data
-
-    entry.async_on_unload(entry.add_update_listener(update_listener))
-    await state_coordinator.async_config_entry_first_refresh()
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    registry: DeviceRegistry = device_registry.async_get(hass)
-    device_entry = registry.async_get_device({(DOMAIN, entry.unique_id)})
-    entry_data.device_entry = device_entry
-
+def register_services(hass: HomeAssistant, domain: str):
     def get_response(coro: Coroutine):
         @wraps(coro)
         async def wrapper(call: ServiceCall) -> ServiceResponse:
             entry_ids = await async_extract_config_entry_ids(hass, call)
             data = await asyncio.gather(
-                *(coro(hass.data[DOMAIN][entry_id], call) for entry_id in entry_ids)
+                *(coro(hass.data[domain][entry_id], call) for entry_id in entry_ids)
             )
             return {"results": [result for results in data for result in results]}
 
@@ -205,7 +164,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def poll_sensor(entry_data: EntryData, call: ServiceCall) -> list[dict]:
         entities = [
             entity
-            for platform in entity_platform.async_get_platforms(hass, DOMAIN)
+            for platform in entity_platform.async_get_platforms(hass, domain)
             for entity in platform.entities.values()
             if isinstance(entity, BaseSensorEntity)
             and entity.coordinator == entry_data.state_coordinator
@@ -247,7 +206,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return await entry_data.manager.async_turn_off()
 
     hass.services.async_register(
-        DOMAIN,
+        domain,
         SERVICE_EXECUTE_COMMAND,
         execute_command,
         EXECUTE_COMMAND_SCHEMA,
@@ -255,7 +214,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     hass.services.async_register(
-        DOMAIN,
+        domain,
         SERVICE_RUN_ACTION,
         run_action,
         RUN_ACTION_SCHEMA,
@@ -263,7 +222,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     hass.services.async_register(
-        DOMAIN,
+        domain,
         SERVICE_POLL_SENSOR,
         poll_sensor,
         None,
@@ -271,7 +230,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     hass.services.async_register(
-        DOMAIN,
+        domain,
         SERVICE_TURN_ON,
         turn_on,
         None,
@@ -279,12 +238,67 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     hass.services.async_register(
-        DOMAIN,
+        domain,
         SERVICE_TURN_OFF,
         turn_off,
         None,
         SupportsResponse.ONLY,
     )
+
+
+async def async_initialize(
+    hass: HomeAssistant,
+    domain: str,
+    entry: ConfigEntry,
+    manager: SSHManager,
+    update_interval: int,
+):
+    state_coordinator = StateCoordinator(hass, manager, update_interval)
+
+    command_coordinators = [
+        SensorCommandCoordinator(hass, manager, command)
+        for command in manager.sensor_commands
+        if command.interval
+    ]
+
+    entry_data = EntryData(manager, state_coordinator, command_coordinators)
+
+    hass.data.setdefault(domain, {})
+    hass.data[domain][entry.entry_id] = entry_data
+
+    entry.async_on_unload(entry.add_update_listener(update_listener))
+    await state_coordinator.async_config_entry_first_refresh()
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    registry: DeviceRegistry = device_registry.async_get(hass)
+    device_entry = registry.async_get_device({(domain, entry.unique_id)})
+    entry_data.device_entry = device_entry
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up SSH from a config entry."""
+    data = entry.data
+    options = entry.options
+
+    manager = SSHManager(
+        data[CONF_HOST],
+        name=data[CONF_NAME],
+        port=data[CONF_PORT],
+        username=data.get(CONF_USERNAME),
+        password=data.get(CONF_PASSWORD),
+        key_filename=data.get(CONF_KEY_FILENAME),
+        host_keys_filename=data.get(CONF_HOST_KEYS_FILENAME),
+        allow_turn_off=options[CONF_ALLOW_TURN_OFF],
+        command_timeout=options[CONF_COMMAND_TIMEOUT],
+        collection=get_collection(hass, options),
+        logger=_LOGGER,
+    )
+
+    manager.set_mac_address(data[CONF_MAC])
+
+    await async_initialize(hass, DOMAIN, entry, manager, options[CONF_UPDATE_INTERVAL])
+
+    register_services(hass, DOMAIN)
 
     return True
 
