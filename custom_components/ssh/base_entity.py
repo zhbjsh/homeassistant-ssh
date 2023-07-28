@@ -8,7 +8,7 @@ from homeassistant.helpers.entity import DeviceInfo, generate_entity_id
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
-from .const import CONF_ENTITY_REGISTRY_ENABLED_DEFAULT, DOMAIN
+from .const import CONF_ENTITY_REGISTRY_ENABLED_DEFAULT
 from .coordinator import StateCoordinator
 
 
@@ -41,7 +41,7 @@ class BaseEntity(CoordinatorEntity):
     @property
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
-            identifiers={(DOMAIN, self._config_entry.unique_id)},
+            identifiers={(self._config_entry.domain, self._config_entry.unique_id)},
             name=self._config_entry.title,
             sw_version=(
                 f"{self._manager.os_name} {self._manager.os_version}"

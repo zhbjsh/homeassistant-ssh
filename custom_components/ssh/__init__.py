@@ -97,12 +97,12 @@ class EntryData:
     device_entry: DeviceEntry | None = None
 
 
-async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    await async_unload_entry(hass, entry)
-    await async_setup_entry(hass, entry)
+async def async_reload(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    await entry.async_unload(hass)
+    await entry.async_setup(hass)
 
 
-def register_services(hass: HomeAssistant, domain: str):
+def async_register_services(hass: HomeAssistant, domain: str):
     def get_response(coro: Coroutine):
         @wraps(coro)
         async def wrapper(call: ServiceCall) -> ServiceResponse:
@@ -248,12 +248,13 @@ def register_services(hass: HomeAssistant, domain: str):
 
 async def async_initialize(
     hass: HomeAssistant,
-    domain: str,
     entry: ConfigEntry,
     manager: SSHManager,
-    update_interval: int,
+    platforms: list[Platform],
 ):
-    state_coordinator = StateCoordinator(hass, manager, update_interval)
+    state_coordinator = StateCoordinator(
+        hass, manager, entry.options[CONF_UPDATE_INTERVAL]
+    )
 
     command_coordinators = [
         SensorCommandCoordinator(hass, manager, command)
@@ -263,16 +264,18 @@ async def async_initialize(
 
     entry_data = EntryData(manager, state_coordinator, command_coordinators)
 
-    hass.data.setdefault(domain, {})
-    hass.data[domain][entry.entry_id] = entry_data
+    hass.data.setdefault(entry.domain, {})
+    hass.data[entry.domain][entry.entry_id] = entry_data
 
-    entry.async_on_unload(entry.add_update_listener(update_listener))
+    entry.async_on_unload(entry.add_update_listener(async_reload))
     await state_coordinator.async_config_entry_first_refresh()
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await hass.config_entries.async_forward_entry_setups(entry, platforms)
 
     registry: DeviceRegistry = device_registry.async_get(hass)
-    device_entry = registry.async_get_device({(domain, entry.unique_id)})
+    device_entry = registry.async_get_device({(entry.domain, entry.unique_id)})
     entry_data.device_entry = device_entry
+
+    async_register_services(hass, entry.domain)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -295,10 +298,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     manager.set_mac_address(data[CONF_MAC])
-
-    await async_initialize(hass, DOMAIN, entry, manager, options[CONF_UPDATE_INTERVAL])
-
-    register_services(hass, DOMAIN)
+    await async_initialize(hass, entry, manager, PLATFORMS)
 
     return True
 

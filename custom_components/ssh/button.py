@@ -13,14 +13,11 @@ from .base_entity import BaseActionEntity, BaseEntity
 from .const import DOMAIN
 
 
-async def async_setup_entry(
+async def async_get_entities(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Set up the SSH sensor platform."""
-    entry_data: EntryData = hass.data[DOMAIN][config_entry.entry_id]
-
+    entry_data: EntryData,
+) -> list[ButtonEntity]:
     entities = [PowerEntity(entry_data.state_coordinator, config_entry)]
 
     for command in entry_data.manager.action_commands:
@@ -30,6 +27,17 @@ async def async_setup_entry(
             continue
         entities.append(Entity(entry_data.state_coordinator, config_entry, command))
 
+    return entities
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up the SSH button platform."""
+    entry_data: EntryData = hass.data[DOMAIN][config_entry.entry_id]
+    entities = await async_get_entities(hass, config_entry, entry_data)
     async_add_entities(entities)
 
 

@@ -17,14 +17,12 @@ from .const import DOMAIN
 from .helpers import get_child_added_listener, get_child_removed_listener
 
 
-async def async_setup_entry(
+async def async_get_entities(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Set up the SSH switch platform."""
+    entry_data: EntryData,
+) -> list[SwitchEntity]:
     platform = entity_platform.async_get_current_platform()
-    entry_data: EntryData = hass.data[DOMAIN][config_entry.entry_id]
 
     child_added_listener = get_child_added_listener(
         hass, platform, entry_data.state_coordinator, config_entry, Entity
@@ -45,6 +43,17 @@ async def async_setup_entry(
             continue
         entities.append(Entity(entry_data.state_coordinator, config_entry, sensor))
 
+    return entities
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up the SSH switch platform."""
+    entry_data: EntryData = hass.data[DOMAIN][config_entry.entry_id]
+    entities = await async_get_entities(hass, config_entry, entry_data)
     async_add_entities(entities)
 
 
