@@ -7,7 +7,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import EntryData
 from .const import DOMAIN
-from ha_ssh_helpers.text import async_get_entities
+from .helpers.text import async_get_entities
 
 
 async def async_setup_entry(

@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 
 from .const import DOMAIN
-from ha_ssh_helpers.config_flow import ConfigFlow, OptionsFlow
+from .helpers.config_flow import ConfigFlow, OptionsFlow
 
 _LOGGER = logging.getLogger(__name__)
 

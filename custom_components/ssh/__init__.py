@@ -17,14 +17,14 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
-from ha_ssh_helpers import PLATFORMS, EntryData, async_initialize
-from ha_ssh_helpers.const import (
+from .helpers import PLATFORMS, EntryData, async_initialize
+from .helpers.const import (
     CONF_ALLOW_TURN_OFF,
     CONF_COMMAND_TIMEOUT,
     CONF_HOST_KEYS_FILENAME,
     CONF_KEY_FILENAME,
 )
-from ha_ssh_helpers.converter import get_collection
+from .helpers.converter import get_collection
 
 _LOGGER = logging.getLogger(__name__)
 
