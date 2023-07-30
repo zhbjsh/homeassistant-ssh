@@ -16,15 +16,15 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
-from .helpers import PLATFORMS, EntryData, async_initialize
-from .helpers.const import (
+from .base import PLATFORMS, EntryData, async_initialize_entry, async_unload_entry
+from .base.const import (
     CONF_ALLOW_TURN_OFF,
     CONF_COMMAND_TIMEOUT,
     CONF_HOST_KEYS_FILENAME,
     CONF_KEY_FILENAME,
 )
-from .helpers.converter import get_collection
+from .base.converter import get_collection
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,20 +49,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     manager.set_mac_address(data[CONF_MAC])
-    await async_initialize(hass, entry, manager, PLATFORMS)
+    await async_initialize_entry(hass, entry, manager, PLATFORMS)
 
     return True
-
-
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        entry_data: EntryData = hass.data[DOMAIN].pop(entry.entry_id)
-        entry_data.state_coordinator.stop()
-
-        for coordinator in entry_data.command_coordinators:
-            coordinator.stop()
-
-        await entry_data.manager.async_disconnect()
-
-    return unload_ok

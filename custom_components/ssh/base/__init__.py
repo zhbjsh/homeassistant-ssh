@@ -81,12 +81,62 @@ class EntryData:
     device_entry: DeviceEntry | None = None
 
 
-async def async_reload(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_initialize_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    manager: SSHManager,
+    platforms: list[Platform],
+):
+    """Initialize a config entry."""
+    state_coordinator = StateCoordinator(
+        hass, manager, entry.options[CONF_UPDATE_INTERVAL]
+    )
+
+    command_coordinators = [
+        SensorCommandCoordinator(hass, manager, command)
+        for command in manager.sensor_commands
+        if command.interval
+    ]
+
+    entry_data = EntryData(manager, state_coordinator, command_coordinators)
+
+    hass.data.setdefault(entry.domain, {})
+    hass.data[entry.domain][entry.entry_id] = entry_data
+
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+    await state_coordinator.async_config_entry_first_refresh()
+    await hass.config_entries.async_forward_entry_setups(entry, platforms)
+
+    registry: DeviceRegistry = device_registry.async_get(hass)
+    device_entry = registry.async_get_device({(entry.domain, entry.unique_id)})
+    entry_data.device_entry = device_entry
+
+    async_register_services(hass, entry.domain)
+
+
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload a config entry."""
     await entry.async_unload(hass)
     await entry.async_setup(hass)
 
 
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload a config entry."""
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        entry_data: EntryData = hass.data[entry.domain].pop(entry.entry_id)
+        entry_data.state_coordinator.stop()
+
+        for coordinator in entry_data.command_coordinators:
+            coordinator.stop()
+
+        await entry_data.manager.async_close()
+
+    return unload_ok
+
+
 def async_register_services(hass: HomeAssistant, domain: str):
+    """Register the services for a domain."""
+
     def get_response(coro: Coroutine):
         @wraps(coro)
         async def wrapper(call: ServiceCall) -> ServiceResponse:
@@ -228,35 +278,3 @@ def async_register_services(hass: HomeAssistant, domain: str):
         None,
         SupportsResponse.ONLY,
     )
-
-
-async def async_initialize(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
-    manager: SSHManager,
-    platforms: list[Platform],
-):
-    state_coordinator = StateCoordinator(
-        hass, manager, entry.options[CONF_UPDATE_INTERVAL]
-    )
-
-    command_coordinators = [
-        SensorCommandCoordinator(hass, manager, command)
-        for command in manager.sensor_commands
-        if command.interval
-    ]
-
-    entry_data = EntryData(manager, state_coordinator, command_coordinators)
-
-    hass.data.setdefault(entry.domain, {})
-    hass.data[entry.domain][entry.entry_id] = entry_data
-
-    entry.async_on_unload(entry.add_update_listener(async_reload))
-    await state_coordinator.async_config_entry_first_refresh()
-    await hass.config_entries.async_forward_entry_setups(entry, platforms)
-
-    registry: DeviceRegistry = device_registry.async_get(hass)
-    device_entry = registry.async_get_device({(entry.domain, entry.unique_id)})
-    entry_data.device_entry = device_entry
-
-    async_register_services(hass, entry.domain)

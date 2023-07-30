@@ -1,11 +1,11 @@
-"""Platform for text integration."""
 from __future__ import annotations
 
-from ssh_terminal_manager import TextSensor
+from typing import Any
 
-from homeassistant.components.text import ENTITY_ID_FORMAT, TextEntity, TextMode
+from ssh_terminal_manager import BinarySensor
+
+from homeassistant.components.switch import ENTITY_ID_FORMAT, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_MODE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_platform
 
@@ -18,7 +18,7 @@ async def async_get_entities(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
     entry_data: EntryData,
-) -> list[TextEntity]:
+) -> list[SwitchEntity]:
     platform = entity_platform.async_get_current_platform()
 
     child_added_listener = get_child_added_listener(
@@ -32,11 +32,7 @@ async def async_get_entities(
     entities = []
 
     for sensor in entry_data.manager.sensors_by_key.values():
-        if not (
-            isinstance(sensor, TextSensor)
-            and sensor.controllable
-            and not sensor.options
-        ):
+        if not (isinstance(sensor, BinarySensor) and sensor.controllable):
             continue
         if sensor.dynamic:
             sensor.on_child_added.subscribe(child_added_listener)
@@ -47,33 +43,16 @@ async def async_get_entities(
     return entities
 
 
-class Entity(BaseSensorEntity, TextEntity):
+class Entity(BaseSensorEntity, SwitchEntity):
     _entity_id_format = ENTITY_ID_FORMAT
-    _sensor: TextSensor
+    _sensor: BinarySensor
 
     @property
-    def native_value(self) -> str | None:
+    def is_on(self) -> bool | None:
         return self._sensor.value
 
-    @property
-    def native_max(self) -> int:
-        if self._sensor.maximum is not None:
-            return int(self._sensor.maximum)
-        return 100
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        await self._manager.async_set_sensor_value(self.key, True)
 
-    @property
-    def native_min(self) -> int:
-        if self._sensor.minimum is not None:
-            return int(self._sensor.minimum)
-        return 0
-
-    @property
-    def pattern(self) -> str | None:
-        return self._sensor.pattern
-
-    @property
-    def mode(self) -> TextMode:
-        return self._attributes.get(CONF_MODE, TextMode.TEXT)
-
-    async def async_set_value(self, value: str) -> None:
-        await self._manager.async_set_sensor_value(self.key, value)
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self._manager.async_set_sensor_value(self.key, False)

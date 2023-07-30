@@ -6,8 +6,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import EntryData
+from .base.switch import async_get_entities
 from .const import DOMAIN
-from .helpers.switch import async_get_entities
 
 
 async def async_setup_entry(

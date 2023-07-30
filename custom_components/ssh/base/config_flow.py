@@ -1,4 +1,3 @@
-"""Config flow for SSH integration."""
 from __future__ import annotations
 
 import logging
@@ -61,7 +60,7 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.device_registry import format_mac
 from homeassistant.helpers.selector import (
@@ -100,8 +99,6 @@ from .converter import (
     get_collection,
     get_sensor_command_config,
 )
-
-_LOGGER = logging.getLogger(__name__)
 
 DEFAULT_UPDATE_INTERVAL = 30
 DEFAULT_HOST_KEYS_FILENAME = "known_hosts"
@@ -251,40 +248,13 @@ class ListSelector(ObjectSelector):
 
 
 class OptionsFlow(config_entries.OptionsFlow):
-    def __init_subclass__(cls, *, logger: logging.Logger = _LOGGER) -> None:
+    def __init_subclass__(cls, *, logger: logging.Logger) -> None:
         super().__init_subclass__()
         cls.logger = logger
 
     def __init__(self, config_entry: ConfigEntry) -> None:
         self.config_entry = config_entry
         self._data = config_entry.options.copy()
-
-    @property
-    def init_schema(self) -> vol.Schema:
-        return vol.Schema(
-            {
-                vol.Required(
-                    CONF_ALLOW_TURN_OFF,
-                    default=self._data[CONF_ALLOW_TURN_OFF],
-                ): bool,
-                vol.Required(
-                    CONF_UPDATE_INTERVAL,
-                    default=self._data[CONF_UPDATE_INTERVAL],
-                ): int,
-                vol.Required(
-                    CONF_COMMAND_TIMEOUT,
-                    default=self._data[CONF_COMMAND_TIMEOUT],
-                ): int,
-                vol.Required(
-                    CONF_ACTION_COMMANDS,
-                    default=self._data[CONF_ACTION_COMMANDS],
-                ): ListSelector(ACTION_COMMAND_SCHEMA),
-                vol.Required(
-                    CONF_SENSOR_COMMANDS,
-                    default=self._data[CONF_SENSOR_COMMANDS],
-                ): ListSelector(SENSOR_COMMAND_SCHEMA),
-            }
-        )
 
     def validate_init(self, options: dict[str, Any]) -> dict[str, Any]:
         """Validate the options user input."""
@@ -311,21 +281,46 @@ class OptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="init",
             errors=errors,
-            data_schema=self.init_schema,
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_ALLOW_TURN_OFF,
+                        default=self._data[CONF_ALLOW_TURN_OFF],
+                    ): bool,
+                    vol.Required(
+                        CONF_UPDATE_INTERVAL,
+                        default=self._data[CONF_UPDATE_INTERVAL],
+                    ): int,
+                    vol.Required(
+                        CONF_COMMAND_TIMEOUT,
+                        default=self._data[CONF_COMMAND_TIMEOUT],
+                    ): int,
+                    vol.Required(
+                        CONF_ACTION_COMMANDS,
+                        default=self._data[CONF_ACTION_COMMANDS],
+                    ): ListSelector(ACTION_COMMAND_SCHEMA),
+                    vol.Required(
+                        CONF_SENSOR_COMMANDS,
+                        default=self._data[CONF_SENSOR_COMMANDS],
+                    ): ListSelector(SENSOR_COMMAND_SCHEMA),
+                }
+            ),
         )
 
 
 class ConfigFlow(config_entries.ConfigFlow):
+    VERSION = 1
+
     def __init_subclass__(
         cls,
         *,
+        logger: logging.Logger,
         domain: str | None = None,
-        logger: logging.Logger = _LOGGER,
         **kwargs: Any,
     ) -> None:
         super().__init_subclass__(domain=domain, **kwargs)
-        cls.domain = domain
         cls.logger = logger
+        cls.domain = domain
 
     def __init__(self) -> None:
         self._reauth_entry: ConfigEntry | None = None
@@ -340,67 +335,39 @@ class ConfigFlow(config_entries.ConfigFlow):
         """Create the options flow."""
         return OptionsFlow(config_entry)
 
-    @property
-    def user_schema(self) -> vol.Schema:
-        return vol.Schema(
-            {
-                vol.Required(
-                    CONF_HOST,
-                    default=self._data.get(CONF_HOST, vol.UNDEFINED),
-                ): str,
-                vol.Required(
-                    CONF_PORT,
-                    default=self._data.get(CONF_PORT, DEFAULT_PORT),
-                ): int,
-                vol.Optional(
-                    CONF_USERNAME,
-                    default=self._data.get(CONF_USERNAME, vol.UNDEFINED),
-                ): str,
-                vol.Optional(
-                    CONF_PASSWORD,
-                    default=self._data.get(CONF_PASSWORD, vol.UNDEFINED),
-                ): str,
-                vol.Required(
-                    CONF_DEFAULT_COMMANDS,
-                    default=self._data.get(CONF_DEFAULT_COMMANDS, vol.UNDEFINED),
-                ): DEFAULT_COMMANDS_SELECTOR,
-                vol.Optional(
-                    CONF_KEY_FILENAME,
-                    default=self._data.get(CONF_KEY_FILENAME, vol.UNDEFINED),
-                ): str,
-                vol.Optional(
-                    CONF_HOST_KEYS_FILENAME,
-                    default=self._data.get(
-                        CONF_HOST_KEYS_FILENAME,
-                        f"{self.hass.config.config_dir}/{DEFAULT_HOST_KEYS_FILENAME}",
-                    ),
-                ): str,
-                vol.Required(
-                    CONF_ADD_HOST_KEYS,
-                    default=self._data.get(CONF_ADD_HOST_KEYS, DEFAULT_ADD_HOST_KEYS),
-                ): bool,
-            }
-        )
+    def get_mac_address(self, manager: SSHManager) -> str | None:
+        """Get MAC address from manager."""
+        if mac_address := manager.mac_address:
+            self.logger.debug("Detected MAC address: %s", mac_address)
+            try:
+                return self.validate_mac_address(mac_address)
+            except MACAddressInvalidError as exc:
+                self.logger.debug(exc)
 
-    @property
-    def mac_address_schema(self) -> vol.Schema:
-        return vol.Schema(
-            {
-                vol.Required(
-                    CONF_MAC, default=self._data.get(CONF_MAC, vol.UNDEFINED)
-                ): str
-            }
-        )
+    async def async_get_hostname(self, manager: SSHManager) -> str | None:
+        """Get hostname from manager."""
+        if hostname := manager.hostname:
+            self.logger.debug("Detected hostname: %s", hostname)
+            try:
+                return await self.async_validate_name(hostname)
+            except NameExistsError as exc:
+                self.logger.debug(exc)
 
-    @property
-    def name_schema(self) -> vol.Schema:
-        return vol.Schema(
-            {
-                vol.Required(
-                    CONF_NAME, default=self._data.get(CONF_NAME, vol.UNDEFINED)
-                ): str
-            }
-        )
+    def get_options(self, manager: SSHManager) -> dict[str, Any]:
+        """Get options from manager."""
+        return {
+            CONF_ALLOW_TURN_OFF: manager.allow_turn_off,
+            CONF_UPDATE_INTERVAL: DEFAULT_UPDATE_INTERVAL,
+            CONF_COMMAND_TIMEOUT: manager.command_timeout,
+            CONF_ACTION_COMMANDS: [
+                get_action_command_config(command)
+                for command in manager.action_commands
+            ],
+            CONF_SENSOR_COMMANDS: [
+                get_sensor_command_config(command)
+                for command in manager.sensor_commands
+            ],
+        }
 
     async def async_validate_user(self, data: dict[str, Any]) -> dict[str, Any]:
         """Validate the config user input."""
@@ -420,36 +387,15 @@ class ConfigFlow(config_entries.ConfigFlow):
             logger=self.logger,
         )
 
-        await manager.async_update_state(raise_errors=True)
-        await manager.async_disconnect()
+        try:
+            await manager.async_update_state(raise_errors=True)
+        finally:
+            await manager.async_close()
 
-        if mac_address := manager.mac_address:
-            self.logger.debug("Detected MAC address: %s", mac_address)
-            try:
-                data[CONF_MAC] = self.validate_mac_address(mac_address)
-            except MACAddressInvalidError as exc:
-                self.logger.debug(exc)
+        data[CONF_MAC] = self.get_mac_address(manager)
+        data[CONF_NAME] = await self.async_get_hostname(manager)
 
-        if hostname := manager.hostname:
-            self.logger.debug("Detected hostname: %s", hostname)
-            try:
-                data[CONF_NAME] = await self.async_validate_name(hostname)
-            except NameExistsError as exc:
-                self.logger.debug(exc)
-
-        options = {
-            CONF_ALLOW_TURN_OFF: manager.allow_turn_off,
-            CONF_UPDATE_INTERVAL: DEFAULT_UPDATE_INTERVAL,
-            CONF_COMMAND_TIMEOUT: manager.command_timeout,
-            CONF_ACTION_COMMANDS: [
-                get_action_command_config(command)
-                for command in manager.action_commands
-            ],
-            CONF_SENSOR_COMMANDS: [
-                get_sensor_command_config(command)
-                for command in manager.sensor_commands
-            ],
-        }
+        options = self.get_options(manager)
 
         return data, options
 
@@ -480,6 +426,21 @@ class ConfigFlow(config_entries.ConfigFlow):
 
         return name
 
+    async def async_handle_step_user_success(self):
+        """Continue with step mac address or update reauth entry."""
+        if not self._reauth_entry:
+            return await self.async_step_mac_address()
+
+        self.hass.config_entries.async_update_entry(
+            self._reauth_entry,
+            data={
+                **self._data,
+                CONF_MAC: self._reauth_entry[CONF_MAC],
+                CONF_NAME: self._reauth_entry[CONF_NAME],
+            },
+        )
+        return self.async_abort(reason="reauth_successful")
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -508,23 +469,52 @@ class ConfigFlow(config_entries.ConfigFlow):
                 self.logger.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
-                if not self._reauth_entry:
-                    return await self.async_step_mac_address()
-                data = {
-                    **self._data,
-                    CONF_MAC: self._reauth_entry[CONF_MAC],
-                    CONF_NAME: self._reauth_entry[CONF_NAME],
-                }
-                self.hass.config_entries.async_update_entry(
-                    self._reauth_entry,
-                    data=data,
-                )
-                return self.async_abort(reason="reauth_successful")
+                return await self.async_handle_step_user_success()
 
         return self.async_show_form(
             step_id="user",
             errors=errors,
-            data_schema=self.user_schema,
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_HOST,
+                        default=self._data.get(CONF_HOST, vol.UNDEFINED),
+                    ): str,
+                    vol.Required(
+                        CONF_PORT,
+                        default=self._data.get(CONF_PORT, DEFAULT_PORT),
+                    ): int,
+                    vol.Optional(
+                        CONF_USERNAME,
+                        default=self._data.get(CONF_USERNAME, vol.UNDEFINED),
+                    ): str,
+                    vol.Optional(
+                        CONF_PASSWORD,
+                        default=self._data.get(CONF_PASSWORD, vol.UNDEFINED),
+                    ): str,
+                    vol.Required(
+                        CONF_DEFAULT_COMMANDS,
+                        default=self._data.get(CONF_DEFAULT_COMMANDS, vol.UNDEFINED),
+                    ): DEFAULT_COMMANDS_SELECTOR,
+                    vol.Optional(
+                        CONF_KEY_FILENAME,
+                        default=self._data.get(CONF_KEY_FILENAME, vol.UNDEFINED),
+                    ): str,
+                    vol.Optional(
+                        CONF_HOST_KEYS_FILENAME,
+                        default=self._data.get(
+                            CONF_HOST_KEYS_FILENAME,
+                            f"{self.hass.config.config_dir}/{DEFAULT_HOST_KEYS_FILENAME}",
+                        ),
+                    ): str,
+                    vol.Required(
+                        CONF_ADD_HOST_KEYS,
+                        default=self._data.get(
+                            CONF_ADD_HOST_KEYS, DEFAULT_ADD_HOST_KEYS
+                        ),
+                    ): bool,
+                }
+            ),
         )
 
     async def async_step_mac_address(
@@ -551,7 +541,13 @@ class ConfigFlow(config_entries.ConfigFlow):
         return self.async_show_form(
             step_id="mac_address",
             errors=errors,
-            data_schema=self.mac_address_schema,
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_MAC, default=self._data.get(CONF_MAC, vol.UNDEFINED)
+                    ): str
+                }
+            ),
         )
 
     async def async_step_name(
@@ -580,7 +576,13 @@ class ConfigFlow(config_entries.ConfigFlow):
         return self.async_show_form(
             step_id="name",
             errors=errors,
-            data_schema=self.name_schema,
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_NAME, default=self._data.get(CONF_NAME, vol.UNDEFINED)
+                    ): str
+                }
+            ),
         )
 
     async def async_step_reauth(self, user_input: Mapping[str, Any]) -> FlowResult:
