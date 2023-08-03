@@ -387,10 +387,8 @@ class ConfigFlow(config_entries.ConfigFlow):
             logger=self.logger,
         )
 
-        try:
+        async with manager:
             await manager.async_update_state(raise_errors=True)
-        finally:
-            await manager.async_close()
 
         data[CONF_MAC] = self.get_mac_address(manager)
         data[CONF_NAME] = await self.async_get_hostname(manager)
