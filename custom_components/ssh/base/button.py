@@ -3,16 +3,14 @@ from __future__ import annotations
 from ssh_terminal_manager import ActionKey
 
 from homeassistant.components.button import ENTITY_ID_FORMAT, ButtonEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from . import EntryData
 from .base_entity import BaseActionEntity, BaseEntity
+from .entry_data import EntryData
 
 
 async def async_get_entities(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
     entry_data: EntryData,
 ) -> list[ButtonEntity]:
     entities = []
@@ -22,7 +20,7 @@ async def async_get_entities(
             continue
         if command.key == ActionKey.TURN_OFF:
             continue
-        entities.append(Entity(entry_data.state_coordinator, config_entry, command))
+        entities.append(Entity(entry_data, command))
 
     return entities
 

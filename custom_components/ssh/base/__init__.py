@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Coroutine
-from dataclasses import dataclass
 from functools import wraps
 
 import voluptuous as vol
-from ssh_terminal_manager import Command, CommandOutput, SSHManager
+from ssh_terminal_manager import Command, CommandOutput, SensorKey, SSHManager
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -23,25 +22,32 @@ from homeassistant.core import (
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.helpers import device_registry, entity_platform
-from homeassistant.helpers.device_registry import DeviceEntry, DeviceRegistry
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_platform
 from homeassistant.helpers.service import (
     async_extract_config_entry_ids,
     async_extract_entities,
 )
 
-from .base_entity import BaseSensorEntity
+from .base_entity import BaseActionEntity, BaseEntity, BaseSensorEntity
 from .const import (
     CONF_KEY,
-    CONF_UPDATE_INTERVAL,
     SERVICE_EXECUTE_COMMAND,
     SERVICE_POLL_SENSOR,
     SERVICE_RUN_ACTION,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
+from .converter import Converter
 from .coordinator import SensorCommandCoordinator, StateCoordinator
-from .helpers import get_command_renderer
+from .entry_data import EntryData
+from .helpers import (
+    get_child_add_handler,
+    get_child_remove_handler,
+    get_command_renderer,
+    get_device_sensor_update_handler,
+    get_value_renderer,
+)
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -73,24 +79,22 @@ RUN_ACTION_SCHEMA = vol.Schema(
 )
 
 
-@dataclass
-class EntryData:
-    manager: SSHManager
-    state_coordinator: StateCoordinator
-    command_coordinators: list[SensorCommandCoordinator]
-    device_entry: DeviceEntry | None = None
-
-
 async def async_initialize_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    manager: SSHManager,
     platforms: list[Platform],
+    manager: SSHManager,
+    update_interval: int,
 ):
     """Initialize a config entry."""
-    state_coordinator = StateCoordinator(
-        hass, manager, entry.options[CONF_UPDATE_INTERVAL]
+    device_registry = dr.async_get(hass)
+    device_entry = device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(entry.domain, entry.unique_id)},
+        name=entry.title,
     )
+
+    state_coordinator = StateCoordinator(hass, manager, update_interval)
 
     command_coordinators = [
         SensorCommandCoordinator(hass, manager, command)
@@ -98,20 +102,29 @@ async def async_initialize_entry(
         if command.interval
     ]
 
-    entry_data = EntryData(manager, state_coordinator, command_coordinators)
+    entry_data = EntryData(
+        entry,
+        device_entry,
+        manager,
+        state_coordinator,
+        command_coordinators,
+    )
+
+    handle_device_sensor_update = get_device_sensor_update_handler(
+        hass, entry_data, device_registry
+    )
+
+    for key in SensorKey.OS_NAME, SensorKey.OS_VERSION, SensorKey.MACHINE_TYPE:
+        if sensor := manager.sensors_by_key.get(key):
+            sensor.on_update.subscribe(handle_device_sensor_update)
+
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     hass.data.setdefault(entry.domain, {})
     hass.data[entry.domain][entry.entry_id] = entry_data
 
-    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     await state_coordinator.async_config_entry_first_refresh()
     await hass.config_entries.async_forward_entry_setups(entry, platforms)
-
-    registry: DeviceRegistry = device_registry.async_get(hass)
-    device_entry = registry.async_get_device({(entry.domain, entry.unique_id)})
-    entry_data.device_entry = device_entry
-
-    async_register_services(hass, entry.domain)
 
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -124,9 +137,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         entry_data: EntryData = hass.data[entry.domain].pop(entry.entry_id)
-        entry_data.state_coordinator.stop()
 
-        for coordinator in entry_data.command_coordinators:
+        for coordinator in (
+            entry_data.state_coordinator,
+            *entry_data.command_coordinators,
+        ):
             coordinator.stop()
 
         await entry_data.manager.async_close()

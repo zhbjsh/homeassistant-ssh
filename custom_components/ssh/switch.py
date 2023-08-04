@@ -12,10 +12,10 @@ from .const import DOMAIN
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the SSH switch platform."""
-    entry_data: EntryData = hass.data[DOMAIN][config_entry.entry_id]
-    entities = await async_get_entities(hass, config_entry, entry_data)
+    entry_data: EntryData = hass.data[DOMAIN][entry.entry_id]
+    entities = await async_get_entities(hass, entry_data)
     async_add_entities(entities)

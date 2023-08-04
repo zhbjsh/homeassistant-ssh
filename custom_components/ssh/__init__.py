@@ -16,14 +16,21 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 
-from .base import PLATFORMS, EntryData, async_initialize_entry, async_unload_entry
+from .base import (
+    PLATFORMS,
+    Converter,
+    EntryData,
+    async_initialize_entry,
+    async_register_services,
+    async_unload_entry,
+)
 from .base.const import (
     CONF_ALLOW_TURN_OFF,
     CONF_COMMAND_TIMEOUT,
     CONF_HOST_KEYS_FILENAME,
     CONF_KEY_FILENAME,
+    CONF_UPDATE_INTERVAL,
 )
-from .base.converter import get_collection
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -44,11 +51,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         host_keys_filename=data.get(CONF_HOST_KEYS_FILENAME),
         allow_turn_off=options[CONF_ALLOW_TURN_OFF],
         command_timeout=options[CONF_COMMAND_TIMEOUT],
-        collection=get_collection(hass, options),
+        collection=Converter(hass).get_collection(options),
         logger=_LOGGER,
     )
 
     manager.set_mac_address(data[CONF_MAC])
-    await async_initialize_entry(hass, entry, manager, PLATFORMS)
+
+    await async_initialize_entry(
+        hass,
+        entry,
+        PLATFORMS,
+        manager,
+        options[CONF_UPDATE_INTERVAL],
+    )
+
+    async_register_services(hass, DOMAIN)
 
     return True

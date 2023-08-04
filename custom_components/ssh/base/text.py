@@ -3,31 +3,22 @@ from __future__ import annotations
 from ssh_terminal_manager import TextSensor
 
 from homeassistant.components.text import ENTITY_ID_FORMAT, TextEntity, TextMode
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_MODE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_platform
 
-from . import EntryData
 from .base_entity import BaseSensorEntity
-from .helpers import get_child_added_listener, get_child_removed_listener
+from .entry_data import EntryData
+from .helpers import get_child_add_handler, get_child_remove_handler
 
 
 async def async_get_entities(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
     entry_data: EntryData,
 ) -> list[TextEntity]:
     platform = entity_platform.async_get_current_platform()
-
-    child_added_listener = get_child_added_listener(
-        hass, platform, entry_data.state_coordinator, config_entry, Entity
-    )
-
-    child_removed_listener = get_child_removed_listener(
-        hass, platform, entry_data.state_coordinator, Entity
-    )
-
+    handle_child_add = get_child_add_handler(hass, platform, entry_data, Entity)
+    handle_child_remove = get_child_remove_handler(hass, platform, entry_data, Entity)
     entities = []
 
     for sensor in entry_data.manager.sensors_by_key.values():
@@ -38,10 +29,10 @@ async def async_get_entities(
         ):
             continue
         if sensor.dynamic:
-            sensor.on_child_added.subscribe(child_added_listener)
-            sensor.on_child_removed.subscribe(child_removed_listener)
+            sensor.on_child_add.subscribe(handle_child_add)
+            sensor.on_child_remove.subscribe(handle_child_remove)
             continue
-        entities.append(Entity(entry_data.state_coordinator, config_entry, sensor))
+        entities.append(Entity(entry_data, sensor))
 
     return entities
 

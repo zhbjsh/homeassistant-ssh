@@ -94,11 +94,7 @@ from .const import (
     CONF_SUGGESTED_UNIT_OF_MEASUREMENT,
     CONF_UPDATE_INTERVAL,
 )
-from .converter import (
-    get_action_command_config,
-    get_collection,
-    get_sensor_command_config,
-)
+from .converter import Converter
 
 DEFAULT_UPDATE_INTERVAL = 30
 DEFAULT_HOST_KEYS_FILENAME = "known_hosts"
@@ -258,7 +254,7 @@ class OptionsFlow(config_entries.OptionsFlow):
 
     def validate_init(self, options: dict[str, Any]) -> dict[str, Any]:
         """Validate the options user input."""
-        get_collection(self.hass, options)
+        Converter(self.hass).get_collection(options)
         return options
 
     async def async_step_init(
@@ -355,16 +351,18 @@ class ConfigFlow(config_entries.ConfigFlow):
 
     def get_options(self, manager: SSHManager) -> dict[str, Any]:
         """Get options from manager."""
+        converter = Converter(self.hass)
+
         return {
             CONF_ALLOW_TURN_OFF: manager.allow_turn_off,
             CONF_UPDATE_INTERVAL: DEFAULT_UPDATE_INTERVAL,
             CONF_COMMAND_TIMEOUT: manager.command_timeout,
             CONF_ACTION_COMMANDS: [
-                get_action_command_config(command)
+                converter.get_action_command_config(command)
                 for command in manager.action_commands
             ],
             CONF_SENSOR_COMMANDS: [
-                get_sensor_command_config(command)
+                converter.get_sensor_command_config(command)
                 for command in manager.sensor_commands
             ],
         }

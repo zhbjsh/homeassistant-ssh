@@ -1,8 +1,7 @@
 from typing import Any
 
-from ssh_terminal_manager import ActionCommand, Sensor, State
+from ssh_terminal_manager import ActionCommand, Sensor, SensorKey, State
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_DEVICE_CLASS, CONF_ICON
 from homeassistant.helpers.entity import DeviceInfo, generate_entity_id
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -10,6 +9,7 @@ from homeassistant.util import slugify
 
 from .const import CONF_ENTITY_REGISTRY_ENABLED_DEFAULT
 from .coordinator import StateCoordinator
+from .entry_data import EntryData
 
 
 class BaseEntity(CoordinatorEntity):
@@ -20,13 +20,12 @@ class BaseEntity(CoordinatorEntity):
 
     def __init__(
         self,
-        state_coordinator: StateCoordinator,
-        config_entry: ConfigEntry,
+        entry_data: EntryData,
         attributes: dict | None = None,
     ) -> None:
-        super().__init__(state_coordinator)
-        self._manager = state_coordinator.manager
-        self._config_entry = config_entry
+        super().__init__(entry_data.state_coordinator)
+        self._manager = entry_data.manager
+        self._config_entry = entry_data.config_entry
         self._attributes = attributes or {}
         self.entity_id = generate_entity_id(
             self._entity_id_format,
@@ -41,14 +40,7 @@ class BaseEntity(CoordinatorEntity):
     @property
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
-            identifiers={(self._config_entry.domain, self._config_entry.unique_id)},
-            name=self._config_entry.title,
-            sw_version=(
-                f"{self._manager.os_name} {self._manager.os_version}"
-                if self._manager.os_name and self._manager.os_version
-                else None
-            ),
-            hw_version=self._manager.machine_type,
+            identifiers={(self._config_entry.domain, self._config_entry.unique_id)}
         )
 
     @property
@@ -82,12 +74,11 @@ class BaseActionEntity(BaseEntity):
 
     def __init__(
         self,
-        state_coordinator: StateCoordinator,
-        config_entry: ConfigEntry,
+        entry_data: EntryData,
         command: ActionCommand,
     ) -> None:
         self._command = command
-        super().__init__(state_coordinator, config_entry, command.attributes)
+        super().__init__(entry_data, command.attributes)
 
     @property
     def _id(self) -> str:
@@ -111,12 +102,11 @@ class BaseSensorEntity(BaseEntity):
 
     def __init__(
         self,
-        state_coordinator: StateCoordinator,
-        config_entry: ConfigEntry,
+        entry_data: EntryData,
         sensor: Sensor,
     ) -> None:
         self._sensor = sensor
-        super().__init__(state_coordinator, config_entry, sensor.attributes)
+        super().__init__(entry_data, sensor.attributes)
 
     @property
     def _id(self) -> str:
