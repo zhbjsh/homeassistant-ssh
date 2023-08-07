@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 
-from ssh_terminal_manager import SSHManager
+from ssh_terminal_manager import ActionKey, SensorKey, SSHManager
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -63,6 +63,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         PLATFORMS,
         manager,
         options[CONF_UPDATE_INTERVAL],
+        ignored_action_keys=[ActionKey.TURN_OFF],
     )
 
     async_register_services(hass, DOMAIN)

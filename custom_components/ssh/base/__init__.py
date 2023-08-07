@@ -5,7 +5,13 @@ from collections.abc import Coroutine
 from functools import wraps
 
 import voluptuous as vol
-from ssh_terminal_manager import Command, CommandOutput, SensorKey, SSHManager
+from ssh_terminal_manager import (
+    ActionKey,
+    Command,
+    CommandOutput,
+    SensorKey,
+    SSHManager,
+)
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -85,6 +91,8 @@ async def async_initialize_entry(
     platforms: list[Platform],
     manager: SSHManager,
     update_interval: int,
+    ignored_action_keys: list[ActionKey] | None = None,
+    ignored_sensor_keys: list[SensorKey] | None = None,
 ):
     """Initialize a config entry."""
     device_registry = dr.async_get(hass)
@@ -108,6 +116,8 @@ async def async_initialize_entry(
         manager,
         state_coordinator,
         command_coordinators,
+        ignored_action_keys,
+        ignored_sensor_keys,
     )
 
     handle_device_sensor_update = get_device_sensor_update_handler(

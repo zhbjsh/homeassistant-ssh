@@ -13,12 +13,13 @@ async def async_get_entities(
     hass: HomeAssistant,
     entry_data: EntryData,
 ) -> list[ButtonEntity]:
+    ignored_keys = entry_data.ignored_action_keys
     entities = []
 
     for command in entry_data.manager.action_commands:
         if command.required_variables:
             continue
-        if command.key == ActionKey.TURN_OFF:
+        if ignored_keys and command.key in ignored_keys:
             continue
         entities.append(Entity(entry_data, command))
 

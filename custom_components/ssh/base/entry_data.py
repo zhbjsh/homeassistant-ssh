@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from ssh_terminal_manager import SSHManager
+from ssh_terminal_manager import ActionKey, SensorKey, SSHManager
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import DeviceEntry
@@ -15,3 +15,5 @@ class EntryData:
     manager: SSHManager
     state_coordinator: StateCoordinator
     command_coordinators: list[SensorCommandCoordinator]
+    ignored_action_keys: list[ActionKey] | None = None
+    ignored_sensor_keys: list[SensorKey] | None = None

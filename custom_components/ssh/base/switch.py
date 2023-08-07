@@ -20,10 +20,13 @@ async def async_get_entities(
     platform = entity_platform.async_get_current_platform()
     handle_child_add = get_child_add_handler(hass, platform, entry_data, Entity)
     handle_child_remove = get_child_remove_handler(hass, platform, entry_data, Entity)
+    ignored_keys = entry_data.ignored_sensor_keys
     entities = []
 
     for sensor in entry_data.manager.sensors_by_key.values():
         if not (isinstance(sensor, BinarySensor) and sensor.controllable):
+            continue
+        if ignored_keys and sensor.key in ignored_keys:
             continue
         if sensor.dynamic:
             sensor.on_child_add.subscribe(handle_child_add)

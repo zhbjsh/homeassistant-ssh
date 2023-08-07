@@ -323,14 +323,6 @@ class ConfigFlow(config_entries.ConfigFlow):
         self._data: dict[str, Any] = {}
         self._options: dict[str, Any] = {}
 
-    @staticmethod
-    @callback
-    def async_get_options_flow(
-        config_entry: ConfigEntry,
-    ) -> config_entries.OptionsFlow:
-        """Create the options flow."""
-        return OptionsFlow(config_entry)
-
     def get_mac_address(self, manager: SSHManager) -> str | None:
         """Get MAC address from manager."""
         if mac_address := manager.mac_address:
