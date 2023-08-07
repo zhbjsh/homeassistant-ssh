@@ -29,13 +29,15 @@ class BaseEntity(CoordinatorEntity):
         self._attributes = attributes or {}
         self.entity_id = generate_entity_id(
             self._entity_id_format,
-            f"{self._manager.name}_{self._id}",
+            f"{self._manager.name}_{self._id}" if self._id else self._manager.name,
             hass=self.coordinator.hass,
         )
 
     @property
-    def _id(self) -> str:
-        return slugify(self.name)
+    def _id(self) -> str | None:
+        if isinstance(self.name, str):
+            return slugify(self.name)
+        return None
 
     @property
     def device_info(self) -> DeviceInfo:
