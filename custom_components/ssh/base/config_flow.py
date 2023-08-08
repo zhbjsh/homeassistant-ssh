@@ -60,7 +60,6 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VALUE_TEMPLATE,
 )
-from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.device_registry import format_mac
 from homeassistant.helpers.selector import (
@@ -556,9 +555,8 @@ class ConfigFlow(config_entries.ConfigFlow):
                 self.logger.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
-                title = self._data[CONF_NAME]
                 return self.async_create_entry(
-                    title=title, data=self._data, options=self._options
+                    title=self._data[CONF_NAME], data=self._data, options=self._options
                 )
 
         return self.async_show_form(

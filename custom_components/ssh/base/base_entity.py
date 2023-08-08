@@ -1,8 +1,8 @@
 from typing import Any
 
-from ssh_terminal_manager import ActionCommand, Sensor, SensorKey, State
+from ssh_terminal_manager import ActionCommand, Sensor, State
 
-from homeassistant.const import CONF_DEVICE_CLASS, CONF_ICON
+from homeassistant.const import CONF_DEVICE_CLASS, CONF_ICON, CONF_NAME
 from homeassistant.helpers.entity import DeviceInfo, generate_entity_id
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
@@ -29,25 +29,27 @@ class BaseEntity(CoordinatorEntity):
         self._attributes = attributes or {}
         self.entity_id = generate_entity_id(
             self._entity_id_format,
-            f"{self._manager.name}_{self._id}" if self._id else self._manager.name,
+            f"{self._manager.name}_{self.key}" if self.key else self._manager.name,
             hass=self.coordinator.hass,
         )
 
     @property
-    def _id(self) -> str | None:
-        if isinstance(self.name, str):
-            return slugify(self.name)
-        return None
+    def key(self) -> str | None:
+        return slugify(self.name) if self.name else None
+
+    @property
+    def unique_id(self) -> str:
+        return (
+            f"{self._config_entry.unique_id}_{self._category}_{self.key}"
+            if self.key
+            else self._config_entry.unique_id
+        )
 
     @property
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
             identifiers={(self._config_entry.domain, self._config_entry.unique_id)}
         )
-
-    @property
-    def unique_id(self) -> str:
-        return f"{self._config_entry.unique_id}_{self._category}_{self._id}"
 
     @property
     def device_class(self) -> Any | None:
@@ -83,10 +85,6 @@ class BaseActionEntity(BaseEntity):
         super().__init__(entry_data, command.attributes)
 
     @property
-    def _id(self) -> str:
-        return self.key
-
-    @property
     def key(self) -> str:
         return self._command.key
 
@@ -109,10 +107,6 @@ class BaseSensorEntity(BaseEntity):
     ) -> None:
         self._sensor = sensor
         super().__init__(entry_data, sensor.attributes)
-
-    @property
-    def _id(self) -> str:
-        return self.key
 
     @property
     def key(self) -> str:
