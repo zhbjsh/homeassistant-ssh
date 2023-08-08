@@ -38,6 +38,7 @@ from homeassistant.helpers.service import (
 from .base_entity import BaseActionEntity, BaseEntity, BaseSensorEntity
 from .const import (
     CONF_KEY,
+    CONF_UPDATE_INTERVAL,
     SERVICE_EXECUTE_COMMAND,
     SERVICE_POLL_SENSOR,
     SERVICE_RUN_ACTION,
@@ -88,9 +89,8 @@ RUN_ACTION_SCHEMA = vol.Schema(
 async def async_initialize_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    platforms: list[Platform],
     manager: SSHManager,
-    update_interval: int,
+    platforms: list[Platform],
     ignored_action_keys: list[ActionKey] | None = None,
     ignored_sensor_keys: list[SensorKey] | None = None,
 ):
@@ -99,10 +99,12 @@ async def async_initialize_entry(
     device_entry = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(entry.domain, entry.unique_id)},
-        name=entry.title,
+        name=manager.name,
     )
 
-    state_coordinator = StateCoordinator(hass, manager, update_interval)
+    state_coordinator = StateCoordinator(
+        hass, manager, entry.options[CONF_UPDATE_INTERVAL]
+    )
 
     command_coordinators = [
         SensorCommandCoordinator(hass, manager, command)
@@ -116,6 +118,7 @@ async def async_initialize_entry(
         manager,
         state_coordinator,
         command_coordinators,
+        platforms,
         ignored_action_keys,
         ignored_sensor_keys,
     )
@@ -139,19 +142,19 @@ async def async_initialize_entry(
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload a config entry."""
-    await entry.async_unload(hass)
-    await entry.async_setup(hass)
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        entry_data: EntryData = hass.data[entry.domain].pop(entry.entry_id)
+    entry_data: EntryData = hass.data[entry.domain][entry.entry_id]
+    platforms = entry_data.platforms
+    coordinators = entry_data.state_coordinator, *entry_data.command_coordinators
 
-        for coordinator in (
-            entry_data.state_coordinator,
-            *entry_data.command_coordinators,
-        ):
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, platforms):
+        hass.data[entry.domain].pop(entry.entry_id)
+
+        for coordinator in coordinators:
             coordinator.stop()
 
         await entry_data.manager.async_close()

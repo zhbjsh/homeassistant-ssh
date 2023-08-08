@@ -60,9 +60,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await async_initialize_entry(
         hass,
         entry,
-        PLATFORMS,
         manager,
-        options[CONF_UPDATE_INTERVAL],
+        PLATFORMS,
         ignored_action_keys=[ActionKey.TURN_OFF],
     )
 
