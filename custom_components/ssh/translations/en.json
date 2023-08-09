@@ -30,7 +30,7 @@
                 "title": "Name"
             },
             "reauth_confirm": {
-                "description": "SSH authentication failed, please update your configuration",
+                "description": "SSH authentication failed or host key is unknown, please update your configuration",
                 "title": "Reauthenticate Integration"
             },
             "user": {

@@ -29,7 +29,7 @@
       },
       "reauth_confirm": {
         "title": "[%key:common::config_flow::title::reauth%]",
-        "description": "SSH authentication failed, please update your configuration"
+        "description": "SSH authentication failed or host key is unknown, please update your configuration"
       }
     },
     "error": {

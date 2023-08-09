@@ -36,10 +36,7 @@ class StateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> None:
         try:
             await self.manager.async_update_state()
-        except SSHHostKeyUnknownError as exc:
-            self.stop()
-            raise ConfigEntryError(exc) from exc
-        except SSHAuthenticationError as exc:
+        except (SSHAuthenticationError, SSHHostKeyUnknownError) as exc:
             self.stop()
             raise ConfigEntryAuthFailed(exc) from exc
         except Exception as exc:
