@@ -23,9 +23,25 @@ execute_command:
           unit_of_measurement: "s"
     variables:
       name: Variables
-      description: 'Variables to pass to the command. Example: A variable `name` can be used inside the command as `@variable{name}`.'
+      description: "Variables to pass to the command. Example: A variable `name` can be used inside the command as `@variable{name}`."
       selector:
         object:
+
+poll_sensor:
+  name: Poll sensor
+  description: Poll one or more sensors.
+  target:
+    device:
+      integration: ssh
+    entity:
+      integration: ssh
+      domain:
+        - binary_sensor
+        - number
+        - select
+        - sensor
+        - switch
+        - text
 
 run_action:
   name: Run action
@@ -48,34 +64,18 @@ run_action:
       selector:
         object:
 
-poll_sensor:
-  name: Poll sensor
-  description: Poll one or more sensors.
+turn_off:
+  name: Turn off
+  description: Turn the selected devices off.
   target:
     device:
       integration: ssh
     entity:
       integration: ssh
-      domain:
-        - binary_sensor
-        - number
-        - select
-        - sensor
-        - switch
-        - text
 
 turn_on:
   name: Turn on
   description: Turn the selected devices on.
-  target:
-    device:
-      integration: ssh
-    entity:
-      integration: ssh
-
-turn_off:
-  name: Turn off
-  description: Turn the selected devices off.
   target:
     device:
       integration: ssh
