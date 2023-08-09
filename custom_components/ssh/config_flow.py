@@ -93,14 +93,13 @@ from .const import (
     CONF_SUGGESTED_DISPLAY_PRECISION,
     CONF_SUGGESTED_UNIT_OF_MEASUREMENT,
     CONF_UPDATE_INTERVAL,
+    DEFAULT_HOST_KEYS_FILENAME,
+    DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
 )
 from .converter import Converter
 
 _LOGGER = logging.getLogger(__name__)
-
-DEFAULT_UPDATE_INTERVAL = 30
-DEFAULT_HOST_KEYS_FILENAME = "known_hosts"
 
 
 def validate_sensor(data: dict) -> dict:
@@ -310,9 +309,12 @@ class OptionsFlow(config_entries.OptionsFlow):
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for SSH."""
 
+    VERSION = 1
     logger = _LOGGER
     domain = DOMAIN
-    VERSION = 1
+    _reauth_entry: ConfigEntry | None = None
+    _data: dict[str, Any]
+    _options: dict[str, Any]
 
     @staticmethod
     @callback
@@ -323,11 +325,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return OptionsFlow(config_entry)
 
     def __init__(self) -> None:
-        self._reauth_entry: ConfigEntry | None = None
-        self._data: dict[str, Any] = {}
-        self._options: dict[str, Any] = {}
+        self._data = {}
+        self._options = {}
 
-    def get_mac_address(self, manager: SSHManager) -> str | None:
+    def get_mac_address(self, manager: SSHManager) -> str:
         """Get MAC address from manager."""
         if mac_address := manager.mac_address:
             self.logger.debug("Detected MAC address: %s", mac_address)
@@ -336,7 +337,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except MACAddressInvalidError as exc:
                 self.logger.debug(exc)
 
-    async def async_get_hostname(self, manager: SSHManager) -> str | None:
+    async def async_get_hostname(self, manager: SSHManager) -> str:
         """Get hostname from manager."""
         if hostname := manager.hostname:
             self.logger.debug("Detected hostname: %s", hostname)
@@ -363,7 +364,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ],
         }
 
-    async def async_validate_user(self, data: dict[str, Any]) -> dict[str, Any]:
+    async def async_validate_user(
+        self, data: dict[str, Any]
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Validate the config user input."""
         manager = SSHManager(
             data[CONF_HOST],
@@ -418,7 +421,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return name
 
-    async def async_handle_step_user_success(self):
+    async def async_handle_step_user_success(self) -> FlowResult:
         """Continue with step mac address or update reauth entry."""
         if not self._reauth_entry:
             return await self.async_step_mac_address()
@@ -427,8 +430,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._reauth_entry,
             data={
                 **self._data,
-                CONF_MAC: self._reauth_entry[CONF_MAC],
-                CONF_NAME: self._reauth_entry[CONF_NAME],
+                CONF_MAC: self._reauth_entry.data[CONF_MAC],
+                CONF_NAME: self._reauth_entry.data[CONF_NAME],
             },
         )
         return self.async_abort(reason="reauth_successful")
