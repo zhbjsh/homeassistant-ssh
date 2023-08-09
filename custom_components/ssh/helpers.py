@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from ssh_terminal_manager import Sensor
+from ssh_terminal_manager import Sensor, SensorKey
 
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceRegistry
 from homeassistant.helpers.entity_platform import EntityPlatform
 from homeassistant.helpers.template import Template
+from homeassistant.util.unit_conversion import InformationConverter
 
 from .base_entity import BaseSensorEntity
 from .entry_data import EntryData
@@ -35,18 +36,79 @@ def get_device_sensor_update_handler(
     device_registry: DeviceRegistry,
 ) -> Callable:
     device_id = entry_data.device_entry.id
-    manager = entry_data.manager
+    sensors_by_key = entry_data.manager.sensors_by_key
+    convert = InformationConverter().convert
+
+    def get_hw_version() -> str | None:
+        cpu_name = (
+            sensor.last_known_value
+            if (sensor := sensors_by_key.get(SensorKey.CPU_NAME))
+            else None
+        )
+        cpu_count = (
+            sensor.last_known_value
+            if (sensor := sensors_by_key.get(SensorKey.CPU_COUNT))
+            else None
+        )
+        machine_type = (
+            sensor.last_known_value
+            if (sensor := sensors_by_key.get(SensorKey.MACHINE_TYPE))
+            else None
+        )
+        total_memory = (
+            f"{round(convert(sensor.last_known_value, sensor.unit, 'GB'), 2)} GB RAM"
+            if (sensor := sensors_by_key.get(SensorKey.TOTAL_MEMORY))
+            and sensor.last_known_value
+            and sensor.unit
+            else None
+        )
+        cpu_info = (
+            f"{cpu_count} {cpu_name}"
+            if cpu_count and cpu_name
+            else f"{cpu_count} CPU(s)"
+            if cpu_count
+            else cpu_name
+        )
+        items = [item for item in (cpu_info, machine_type, total_memory) if item]
+        return ", ".join(items) if items else None
+
+    def get_sw_version() -> str | None:
+        os_name = (
+            sensor.last_known_value
+            if (sensor := sensors_by_key.get(SensorKey.OS_NAME))
+            else None
+        )
+        os_version = (
+            sensor.last_known_value
+            if (sensor := sensors_by_key.get(SensorKey.OS_VERSION))
+            else None
+        )
+        return (
+            f"{os_name} {os_version}"
+            if os_name and os_version
+            else os_name or os_version
+        )
+
+    def get_model() -> str | None:
+        model = (
+            sensor.last_known_value
+            if (sensor := sensors_by_key.get(SensorKey.MODEL))
+            else None
+        )
+        hardware = (
+            sensor.last_known_value
+            if (sensor := sensors_by_key.get(SensorKey.HARDWARE))
+            else None
+        )
+        return model or hardware
 
     @callback
     def async_update_device_info():
         device_registry.async_update_device(
             device_id,
-            hw_version=manager.machine_type,
-            sw_version=(
-                f"{manager.os_name} {manager.os_version}"
-                if manager.os_name and manager.os_version
-                else None
-            ),
+            hw_version=get_hw_version(),
+            sw_version=get_sw_version(),
+            model=get_model(),
         )
 
     def handler(sensor: Sensor):
