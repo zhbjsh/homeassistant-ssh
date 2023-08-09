@@ -2,7 +2,7 @@ from typing import Any
 
 from ssh_terminal_manager import ActionCommand, Sensor, State
 
-from homeassistant.const import CONF_DEVICE_CLASS, CONF_ICON, CONF_NAME
+from homeassistant.const import CONF_DEVICE_CLASS, CONF_ICON
 from homeassistant.helpers.entity import DeviceInfo, generate_entity_id
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
