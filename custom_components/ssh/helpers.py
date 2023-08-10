@@ -56,7 +56,7 @@ def get_device_sensor_update_handler(
             else None
         )
         total_memory = (
-            f"{round(convert(sensor.last_known_value, sensor.unit, 'GB'), 2)} GB RAM"
+            f"{round(convert(sensor.last_known_value, sensor.unit, 'GB'))} GB RAM"
             if (sensor := sensors_by_key.get(SensorKey.TOTAL_MEMORY))
             and sensor.last_known_value
             and sensor.unit
