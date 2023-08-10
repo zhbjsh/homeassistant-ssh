@@ -28,6 +28,7 @@ CONF_UPDATE_INTERVAL = "update_interval"
 
 SERVICE_EXECUTE_COMMAND = "execute_command"
 SERVICE_POLL_SENSOR = "poll_sensor"
+SERVICE_RESTART = "restart"
 SERVICE_RUN_ACTION = "run_action"
 SERVICE_TURN_OFF = "turn_off"
 SERVICE_TURN_ON = "turn_on"

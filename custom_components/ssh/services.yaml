@@ -27,22 +27,6 @@ execute_command:
       selector:
         object:
 
-poll_sensor:
-  name: Poll sensor
-  description: Poll one or more sensors.
-  target:
-    device:
-      integration: ssh
-    entity:
-      integration: ssh
-      domain:
-        - binary_sensor
-        - number
-        - select
-        - sensor
-        - switch
-        - text
-
 run_action:
   name: Run action
   description: Run an action on the selected devices.
@@ -64,6 +48,31 @@ run_action:
       selector:
         object:
 
+poll_sensor:
+  name: Poll sensor
+  description: Poll one or more sensors.
+  target:
+    device:
+      integration: ssh
+    entity:
+      integration: ssh
+      domain:
+        - binary_sensor
+        - number
+        - select
+        - sensor
+        - switch
+        - text
+
+turn_on:
+  name: Turn on
+  description: Turn the selected devices on.
+  target:
+    device:
+      integration: ssh
+    entity:
+      integration: ssh
+
 turn_off:
   name: Turn off
   description: Turn the selected devices off.
@@ -73,9 +82,9 @@ turn_off:
     entity:
       integration: ssh
 
-turn_on:
-  name: Turn on
-  description: Turn the selected devices on.
+restart:
+  name: Restart
+  description: Restart the selected devices.
   target:
     device:
       integration: ssh

@@ -50,6 +50,9 @@ class Entity(BaseActionEntity, ButtonEntity):
     _entity_id_format = ENTITY_ID_FORMAT
 
     async def async_press(self) -> None:
+        if self.key == ActionKey.RESTART:
+            await self.coordinator.async_restart()
+            return
         await self._manager.async_run_action(self.key)
 
 
@@ -63,21 +66,19 @@ class PowerEntity(BaseEntity, ButtonEntity):
 
     @property
     def available(self) -> bool:
-        if not self._manager.state.online and self._manager.mac_address:
+        if not self._manager.state.online:
             return True
-
         if (
             self._manager.state.connected
             and self._manager.allow_turn_off
             and ActionKey.TURN_OFF in self._manager.action_commands_by_key
         ):
             return True
-
         return False
 
     async def async_press(self) -> None:
         if not self._manager.state.online:
-            await self._manager.async_turn_on()
+            await self.coordinator.async_turn_on()
 
         elif self._manager.state.connected:
-            await self._manager.async_turn_off()
+            await self.coordinator.async_turn_off()
