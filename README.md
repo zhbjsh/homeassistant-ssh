@@ -418,3 +418,7 @@ Turn the selected devices on.
 #### Turn off (`ssh.turn_off`)
 
 Turn the selected devices off.
+
+#### Restart (`ssh.restart`)
+
+Restart the selected devices.
