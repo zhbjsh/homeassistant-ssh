@@ -82,13 +82,16 @@ PLATFORMS = [
 ]
 
 DEVICE_SENSOR_KEYS = [
+    SensorKey.MACHINE_TYPE,
     SensorKey.OS_NAME,
     SensorKey.OS_VERSION,
-    SensorKey.MACHINE_TYPE,
+    SensorKey.DEVICE_NAME,
+    SensorKey.DEVICE_MODEL,
+    SensorKey.MANUFACTURER,
     SensorKey.CPU_NAME,
-    SensorKey.CPU_COUNT,
-    SensorKey.MODEL,
-    SensorKey.HARDWARE,
+    SensorKey.CPU_CORES,
+    SensorKey.CPU_HARDWARE,
+    SensorKey.CPU_MODEL,
     SensorKey.TOTAL_MEMORY,
 ]
 

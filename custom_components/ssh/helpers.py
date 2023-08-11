@@ -36,86 +36,61 @@ def get_device_sensor_update_handler(
     device_registry: DeviceRegistry,
 ) -> Callable:
     device_id = entry_data.device_entry.id
-    sensors_by_key = entry_data.manager.sensors_by_key
+    manager = entry_data.manager
     convert = InformationConverter().convert
 
     def get_hw_version() -> str | None:
-        cpu_name = (
-            sensor.last_known_value
-            if (sensor := sensors_by_key.get(SensorKey.CPU_NAME))
-            else None
-        )
-        cpu_count = (
-            sensor.last_known_value
-            if (sensor := sensors_by_key.get(SensorKey.CPU_COUNT))
-            else None
-        )
-        machine_type = (
-            sensor.last_known_value
-            if (sensor := sensors_by_key.get(SensorKey.MACHINE_TYPE))
-            else None
+        machine_type = manager.machine_type
+        cpu_cores = manager.cpu_cores
+        cpu_name = manager.cpu_name
+        cpu_info = (
+            f"{cpu_cores} {cpu_name}"
+            if cpu_cores and cpu_name
+            else f"{cpu_cores} CPU(s)"
+            if cpu_cores
+            else cpu_name
         )
         total_memory = (
             f"{round(convert(sensor.last_known_value, sensor.unit, 'GB'))} GB RAM"
-            if (sensor := sensors_by_key.get(SensorKey.TOTAL_MEMORY))
+            if (sensor := manager.sensors_by_key.get(SensorKey.TOTAL_MEMORY))
             and sensor.last_known_value
             and sensor.unit
             else None
-        )
-        cpu_info = (
-            f"{cpu_count} {cpu_name}"
-            if cpu_count and cpu_name
-            else f"{cpu_count} CPU(s)"
-            if cpu_count
-            else cpu_name
         )
         items = [item for item in (cpu_info, machine_type, total_memory) if item]
         return ", ".join(items) if items else None
 
     def get_sw_version() -> str | None:
-        os_name = (
-            sensor.last_known_value
-            if (sensor := sensors_by_key.get(SensorKey.OS_NAME))
-            else None
-        )
-        os_version = (
-            sensor.last_known_value
-            if (sensor := sensors_by_key.get(SensorKey.OS_VERSION))
-            else None
-        )
+        os_name = manager.os_name
+        os_version = manager.os_version
         return (
             f"{os_name} {os_version}"
             if os_name and os_version
             else os_name or os_version
         )
 
+    def get_manufacturer() -> str | None:
+        return manager.manufacturer
+
     def get_model() -> str | None:
-        model = (
-            sensor.last_known_value
-            if (sensor := sensors_by_key.get(SensorKey.MODEL))
-            else None
-        )
-        hardware = (
-            sensor.last_known_value
-            if (sensor := sensors_by_key.get(SensorKey.HARDWARE))
-            else None
-        )
-        return model or hardware
-
-    @callback
-    def async_update_device_info():
-        device_registry.async_update_device(
-            device_id,
-            hw_version=get_hw_version(),
-            sw_version=get_sw_version(),
-            model=get_model(),
+        return (
+            manager.device_model
+            or manager.device_name
+            or manager.cpu_model
+            or manager.cpu_hardware
         )
 
-    def handler(sensor: Sensor):
+    def async_handler(sensor: Sensor):
         if sensor.value is not None:
-            hass.add_job(async_update_device_info)
+            device_registry.async_update_device(
+                device_id,
+                hw_version=get_hw_version(),
+                sw_version=get_sw_version(),
+                manufacturer=get_manufacturer(),
+                model=get_model(),
+            )
 
-    return handler
+    return async_handler
 
 
 def get_child_add_handler(
