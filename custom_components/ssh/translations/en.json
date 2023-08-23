@@ -58,9 +58,14 @@
                     "action_commands": "Action commands",
                     "allow_turn_off": "Allow to turn the device off",
                     "command_timeout": "Command timeout",
+                    "reset_default_commands": "Reset default commands",
                     "sensor_commands": "Sensor commands",
                     "update_interval": "Update interval"
                 }
+            },
+            "reset_default_commands": {
+                "title": "Reset default commands",
+                "description": "Do you really want to reset the default commands and update them to the latest version?"
             }
         }
     }

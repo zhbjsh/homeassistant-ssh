@@ -87,6 +87,7 @@ from .const import (
     CONF_KEY_FILENAME,
     CONF_OPTIONS,
     CONF_PATTERN,
+    CONF_RESET_DEFAULT_COMMANDS,
     CONF_SENSOR_COMMANDS,
     CONF_SENSORS,
     CONF_SEPARATOR,
@@ -254,6 +255,11 @@ class OptionsFlow(config_entries.OptionsFlow):
         self.config_entry = config_entry
         self._data = config_entry.options.copy()
 
+    @property
+    def _default_collection(self) -> Collection | None:
+        if (key := self.config_entry.data[CONF_DEFAULT_COMMANDS]) != "none":
+            return getattr(default_collections, key)
+
     def validate_init(self, options: dict[str, Any]) -> dict[str, Any]:
         """Validate the options user input."""
         Converter(self.hass).get_collection(options)
@@ -274,6 +280,8 @@ class OptionsFlow(config_entries.OptionsFlow):
                 self.logger.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
+                if options[CONF_RESET_DEFAULT_COMMANDS] and self._default_collection:
+                    return await self.async_step_reset_default_commands()
                 return self.async_create_entry(title="", data=options)
 
         return self.async_show_form(
@@ -284,6 +292,10 @@ class OptionsFlow(config_entries.OptionsFlow):
                     vol.Required(
                         CONF_ALLOW_TURN_OFF,
                         default=self._data[CONF_ALLOW_TURN_OFF],
+                    ): bool,
+                    vol.Required(
+                        CONF_RESET_DEFAULT_COMMANDS,
+                        default=False,
                     ): bool,
                     vol.Required(
                         CONF_UPDATE_INTERVAL,
@@ -303,6 +315,52 @@ class OptionsFlow(config_entries.OptionsFlow):
                     ): ListSelector(SENSOR_COMMAND_SCHEMA),
                 }
             ),
+        )
+
+    async def async_step_reset_default_commands(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Reset/update the default commands."""
+        if user_input is None:
+            return self.async_show_form(
+                step_id="reset_default_commands", data_schema=vol.Schema({})
+            )
+
+        converter = Converter(self.hass)
+        old_collection = converter.get_collection(self._data)
+        new_collection = Collection(
+            "",
+            action_commands=self._default_collection.action_commands,
+            sensor_commands=self._default_collection.sensor_commands,
+        )
+
+        for key in new_collection.action_commands_by_key:
+            if key in old_collection.action_commands_by_key:
+                old_collection.remove_action_command(key)
+
+        for key in new_collection.sensors_by_key:
+            if key in old_collection.sensors_by_key:
+                old_collection.remove_sensor(key)
+
+        for command in old_collection.action_commands:
+            new_collection.add_action_command(command)
+
+        for command in old_collection.sensor_commands:
+            new_collection.add_sensor_command(command)
+
+        return self.async_create_entry(
+            title="",
+            data={
+                **self._data,
+                CONF_ACTION_COMMANDS: [
+                    converter.get_action_command_config(command)
+                    for command in new_collection.action_commands
+                ],
+                CONF_SENSOR_COMMANDS: [
+                    converter.get_sensor_command_config(command)
+                    for command in new_collection.sensor_commands
+                ],
+            },
         )
 
 
