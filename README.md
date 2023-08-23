@@ -60,6 +60,10 @@ Devices can be configured by clicking on the _Configure_ button in _Settings_ ->
 
 To avoid unintentional shutdowns, this function is disabled by default. After enabling it, power button and [`ssh.turn_off`](#turn-off-sshturn_off) service can be used to turn the device off.
 
+##### Reset default commands
+
+Select this option to reset all actions/sensors whose keys are included in the default commands and update them to their newest version.
+
 ##### Update interval
 
 The update interval is the time in seconds between updates of the device state. If the device disconnects (shown by the _SSH Status_ sensor), the integration will try to reconnect to it as long as it replies to ping requests (shown by the _Network Status_ sensor).
