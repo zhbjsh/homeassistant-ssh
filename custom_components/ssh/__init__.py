@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from collections.abc import Coroutine
 from functools import wraps
+import logging
 
-import voluptuous as vol
 from ssh_terminal_manager import (
     ActionKey,
     Command,
@@ -13,6 +12,7 @@ from ssh_terminal_manager import (
     SensorKey,
     SSHManager,
 )
+import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -35,8 +35,7 @@ from homeassistant.core import (
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import entity_platform
+from homeassistant.helpers import device_registry as dr, entity_platform
 from homeassistant.helpers.service import (
     async_extract_config_entry_ids,
     async_extract_entities,
@@ -127,7 +126,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         username=data.get(CONF_USERNAME),
         password=data.get(CONF_PASSWORD),
         key_filename=data.get(CONF_KEY_FILENAME),
-        host_keys_filename=data.get(CONF_HOST_KEYS_FILENAME),
         allow_turn_off=options[CONF_ALLOW_TURN_OFF],
         command_timeout=options[CONF_COMMAND_TIMEOUT],
         collection=Converter(hass).get_collection(options),
@@ -135,6 +133,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     manager.set_mac_address(data[CONF_MAC])
+
+    await manager.async_load_host_keys(data.get(CONF_HOST_KEYS_FILENAME))
 
     await async_initialize_entry(
         hass,

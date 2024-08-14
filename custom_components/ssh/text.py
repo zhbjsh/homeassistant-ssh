@@ -1,4 +1,5 @@
 """Platform for text integration."""
+
 from __future__ import annotations
 
 from ssh_terminal_manager import TextSensor

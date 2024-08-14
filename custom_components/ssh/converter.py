@@ -281,7 +281,7 @@ class Converter:
                     if isinstance(sensor, NumberSensor)
                     else self._get_binary_sensor_config(sensor)
                     if isinstance(sensor, BinarySensor)
-                    else {CONF_TYPE: "placeholder"}
+                    else {CONF_TYPE: "none"}
                     for sensor in command.sensors
                 ],
             }

@@ -52,16 +52,19 @@
       "init": {
         "data": {
           "allow_turn_off": "Allow to turn the device off",
-          "reset_default_commands": "Reset default commands",
+          "reset_commands": "Reset commands",
           "update_interval": "Update interval",
           "command_timeout": "Command timeout",
           "action_commands": "Action commands",
           "sensor_commands": "Sensor commands"
         }
       },
-      "reset_default_commands": {
-        "title": "Reset default commands",
-        "description": "Do you really want to reset the default commands and update them to the latest version?"
+      "reset_commands": {
+        "title": "Reset commands",
+        "data": {
+          "reset_default_commands": "Reset the default commands",
+          "remove_custom_commands": "Remove all custom commands"
+        }
       }
     },
     "error": {

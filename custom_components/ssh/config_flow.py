@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 import logging
 import re
-from collections.abc import Mapping
 from typing import Any
 
-import voluptuous as vol
 from ssh_terminal_manager import (
     DEFAULT_ADD_HOST_KEYS,
     DEFAULT_PORT,
@@ -17,6 +16,7 @@ from ssh_terminal_manager import (
     SSHManager,
     default_collections,
 )
+import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.components.binary_sensor import (
@@ -27,8 +27,8 @@ from homeassistant.components.button import (
 )
 from homeassistant.components.number import (
     DEVICE_CLASSES_SCHEMA as NUMBER_DEVICE_CLASSES_SCHEMA,
+    NumberMode,
 )
-from homeassistant.components.number import NumberMode
 from homeassistant.components.sensor import (
     DEVICE_CLASSES_SCHEMA as SENSOR_DEVICE_CLASSES_SCHEMA,
 )
@@ -87,6 +87,8 @@ from .const import (
     CONF_KEY_FILENAME,
     CONF_OPTIONS,
     CONF_PATTERN,
+    CONF_REMOVE_CUSTOM_COMMANDS,
+    CONF_RESET_COMMANDS,
     CONF_RESET_DEFAULT_COMMANDS,
     CONF_SENSOR_COMMANDS,
     CONF_SENSORS,
@@ -126,7 +128,7 @@ def validate_sensor(data: dict) -> dict:
             return BINARY_SENSOR_SCHEMA(data)
         return CONTROLLABLE_BINARY_SENSOR_SCHEMA(data)
 
-    if sensor_type == "placeholder":
+    if sensor_type == "none":
         return data
 
     raise ValueError("Invalid sensor type")
@@ -158,7 +160,7 @@ SENSOR_COMMAND_SCHEMA = COMMAND_SCHEMA.extend(
 
 SENSOR_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_TYPE): vol.Any("text", "number", "binary", "placeholder"),
+        vol.Required(CONF_TYPE): vol.Any("text", "number", "binary", "none"),
         vol.Optional(CONF_NAME): str,
         vol.Optional(CONF_KEY): str,
         vol.Optional(CONF_DYNAMIC): bool,
@@ -265,6 +267,69 @@ class OptionsFlow(config_entries.OptionsFlow):
         Converter(self.hass).get_collection(options)
         return options
 
+    def reset_commands(
+        self,
+        options: dict[str, Any],
+        reset_default_commands: bool,
+        remove_custom_commands: bool,
+    ) -> dict:
+        """Reset the commands."""
+        if not reset_default_commands and not remove_custom_commands:
+            return options
+
+        if self._default_collection:
+            collection = Collection(
+                "",
+                action_commands=self._default_collection.action_commands,
+                sensor_commands=self._default_collection.sensor_commands,
+            )
+        else:
+            collection = Collection("")
+
+        default_action_commands_by_key = collection.action_commands_by_key
+        default_sensors_by_key = collection.sensors_by_key
+        converter = Converter(self.hass)
+        old_default_collection = converter.get_collection(options)
+        old_custom_collection = converter.get_collection(options)
+
+        for key in old_default_collection.action_commands_by_key:
+            if key not in default_action_commands_by_key:
+                old_default_collection.remove_action_command(key)
+
+        for key in old_default_collection.sensors_by_key:
+            if key not in default_sensors_by_key:
+                old_default_collection.remove_sensor(key)
+
+        for key in old_custom_collection.action_commands_by_key:
+            if key in default_action_commands_by_key:
+                old_custom_collection.remove_action_command(key)
+
+        for key in old_custom_collection.sensors_by_key:
+            if key in default_sensors_by_key:
+                old_custom_collection.remove_sensor(key)
+
+        if not reset_default_commands:
+            collection = old_default_collection
+
+        if not remove_custom_commands:
+            for command in old_custom_collection.action_commands:
+                collection.add_action_command(command)
+
+            for command in old_custom_collection.sensor_commands:
+                collection.add_sensor_command(command)
+
+        return {
+            **options,
+            CONF_ACTION_COMMANDS: [
+                converter.get_action_command_config(command)
+                for command in collection.action_commands
+            ],
+            CONF_SENSOR_COMMANDS: [
+                converter.get_sensor_command_config(command)
+                for command in collection.sensor_commands
+            ],
+        }
+
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -280,8 +345,8 @@ class OptionsFlow(config_entries.OptionsFlow):
                 self.logger.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
-                if options[CONF_RESET_DEFAULT_COMMANDS] and self._default_collection:
-                    return await self.async_step_reset_default_commands()
+                if options[CONF_RESET_COMMANDS]:
+                    return await self.async_step_reset_commands()
                 return self.async_create_entry(title="", data=options)
 
         return self.async_show_form(
@@ -294,7 +359,7 @@ class OptionsFlow(config_entries.OptionsFlow):
                         default=self._data[CONF_ALLOW_TURN_OFF],
                     ): bool,
                     vol.Required(
-                        CONF_RESET_DEFAULT_COMMANDS,
+                        CONF_RESET_COMMANDS,
                         default=False,
                     ): bool,
                     vol.Required(
@@ -317,50 +382,34 @@ class OptionsFlow(config_entries.OptionsFlow):
             ),
         )
 
-    async def async_step_reset_default_commands(
+    async def async_step_reset_commands(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Reset/update the default commands."""
-        if user_input is None:
-            return self.async_show_form(
-                step_id="reset_default_commands", data_schema=vol.Schema({})
+        """Handle the reset commands step."""
+        if user_input is not None:
+            return self.async_create_entry(
+                title="",
+                data=self.reset_commands(
+                    self._data,
+                    user_input[CONF_RESET_DEFAULT_COMMANDS],
+                    user_input[CONF_REMOVE_CUSTOM_COMMANDS],
+                ),
             )
 
-        converter = Converter(self.hass)
-        old_collection = converter.get_collection(self._data)
-        new_collection = Collection(
-            "",
-            action_commands=self._default_collection.action_commands,
-            sensor_commands=self._default_collection.sensor_commands,
-        )
-
-        for key in new_collection.action_commands_by_key:
-            if key in old_collection.action_commands_by_key:
-                old_collection.remove_action_command(key)
-
-        for key in new_collection.sensors_by_key:
-            if key in old_collection.sensors_by_key:
-                old_collection.remove_sensor(key)
-
-        for command in old_collection.action_commands:
-            new_collection.add_action_command(command)
-
-        for command in old_collection.sensor_commands:
-            new_collection.add_sensor_command(command)
-
-        return self.async_create_entry(
-            title="",
-            data={
-                **self._data,
-                CONF_ACTION_COMMANDS: [
-                    converter.get_action_command_config(command)
-                    for command in new_collection.action_commands
-                ],
-                CONF_SENSOR_COMMANDS: [
-                    converter.get_sensor_command_config(command)
-                    for command in new_collection.sensor_commands
-                ],
-            },
+        return self.async_show_form(
+            step_id="reset_commands",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_RESET_DEFAULT_COMMANDS,
+                        default=True,
+                    ): bool,
+                    vol.Required(
+                        CONF_REMOVE_CUSTOM_COMMANDS,
+                        default=False,
+                    ): bool,
+                }
+            ),
         )
 
 
@@ -433,7 +482,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             username=data.get(CONF_USERNAME),
             password=data.get(CONF_PASSWORD),
             key_filename=data.get(CONF_KEY_FILENAME),
-            host_keys_filename=data.get(CONF_HOST_KEYS_FILENAME),
             collection=(
                 getattr(default_collections, key)
                 if (key := data[CONF_DEFAULT_COMMANDS]) != "none"
@@ -441,6 +489,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
             logger=self.logger,
         )
+
+        await manager.async_load_host_keys(data.get(CONF_HOST_KEYS_FILENAME))
 
         async with manager:
             await manager.async_update_state(raise_errors=True)

@@ -1,4 +1,5 @@
 """Platform for button integration."""
+
 from __future__ import annotations
 
 from ssh_terminal_manager import ActionKey
