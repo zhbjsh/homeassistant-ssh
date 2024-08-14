@@ -32,7 +32,15 @@ Download the [latest release](https://github.com/zhbjsh/homeassistant-ssh/releas
 
 Click on the _Add Integration_ button in _Settings_ -> _Devices & Services_ and select the _SSH_ integration.
 
-##### Key authentication
+##### Authentication
+
+Authentication can be done with Username & Password or you can use Key-Based Authentication.
+
+###### Username & Password authentication
+
+Simply enter them in the configuration dialog.
+
+###### Key authentication
 
 Key files in the Home Assistant users `~/.ssh/` folder are used automatically. To use another location, enter the path to your file (for example `/config/id_rsa`) and make sure the Home Assistant user has access to it.
 
