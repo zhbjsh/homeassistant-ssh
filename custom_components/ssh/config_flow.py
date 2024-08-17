@@ -419,7 +419,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
     logger = _LOGGER
     domain = DOMAIN
-    _reauth_entry: ConfigEntry | None = None
+    _existing_entry: ConfigEntry | None = None
     _data: dict[str, Any]
     _options: dict[str, Any]
 
@@ -530,19 +530,23 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return name
 
     async def async_handle_step_user_success(self) -> FlowResult:
-        """Continue with step mac address or update reauth entry."""
-        if not self._reauth_entry:
+        """Continue with step mac address or update existing entry."""
+        if not self._existing_entry:
             return await self.async_step_mac_address()
 
         self.hass.config_entries.async_update_entry(
-            self._reauth_entry,
+            self._existing_entry,
             data={
                 **self._data,
-                CONF_MAC: self._reauth_entry.data[CONF_MAC],
-                CONF_NAME: self._reauth_entry.data[CONF_NAME],
+                CONF_MAC: self._existing_entry.data[CONF_MAC],
+                CONF_NAME: self._existing_entry.data[CONF_NAME],
             },
         )
-        return self.async_abort(reason="reauth_successful")
+
+        if self.source == config_entries.SOURCE_REAUTH:
+            return self.async_abort(reason="reauth_successful")
+
+        return self.async_abort(reason="reconf_successful")
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -687,12 +691,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
         )
 
-    async def async_step_reauth(self, user_input: Mapping[str, Any]) -> FlowResult:
-        """Handle the reauth step."""
-        self._reauth_entry = self.hass.config_entries.async_get_entry(
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None):
+        """Handle the reconfigure step."""
+        self._existing_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
         )
-        self._data = self._reauth_entry.data.copy()
+        self._data = self._existing_entry.data.copy()
+        return await self.async_step_user()
+
+    async def async_step_reauth(self, user_input: Mapping[str, Any]) -> FlowResult:
+        """Handle the reauth step."""
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(self, user_input=None) -> FlowResult:
@@ -701,7 +709,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_show_form(
                 step_id="reauth_confirm", data_schema=vol.Schema({})
             )
-        return await self.async_step_user()
+        return await self.async_step_reconfigure()
 
 
 class NameExistsError(Exception):
