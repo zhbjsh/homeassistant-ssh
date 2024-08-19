@@ -534,19 +534,19 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if not self._existing_entry:
             return await self.async_step_mac_address()
 
-        self.hass.config_entries.async_update_entry(
+        return self.async_update_reload_and_abort(
             self._existing_entry,
             data={
                 **self._data,
                 CONF_MAC: self._existing_entry.data[CONF_MAC],
                 CONF_NAME: self._existing_entry.data[CONF_NAME],
             },
+            reason=(
+                "reauth_successful"
+                if self.source == config_entries.SOURCE_REAUTH
+                else "reconf_successful"
+            ),
         )
-
-        if self.source == config_entries.SOURCE_REAUTH:
-            return self.async_abort(reason="reauth_successful")
-
-        return self.async_abort(reason="reconf_successful")
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
