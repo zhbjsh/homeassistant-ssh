@@ -1,7 +1,6 @@
 {
   "domain": "ssh",
   "name": "SSH",
-  "version": "0.9.6",
   "codeowners": [
     "@zhbjsh"
   ],
@@ -15,5 +14,6 @@
     "ssh-terminal-manager==1.0.3"
   ],
   "ssdp": [],
+  "version": "0.9.6",
   "zeroconf": []
 }
