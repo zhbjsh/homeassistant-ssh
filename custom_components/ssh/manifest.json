@@ -14,6 +14,6 @@
     "ssh-terminal-manager==1.0.3"
   ],
   "ssdp": [],
-  "version": "0.9.6",
+  "version": "0.9.7",
   "zeroconf": []
 }
