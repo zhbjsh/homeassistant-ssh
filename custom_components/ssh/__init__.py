@@ -45,6 +45,7 @@ from .base_entity import BaseActionEntity, BaseEntity, BaseSensorEntity
 from .const import (
     CONF_ALLOW_TURN_OFF,
     CONF_COMMAND_TIMEOUT,
+    CONF_DISCONNECT_MODE,
     CONF_HOST_KEYS_FILENAME,
     CONF_KEY,
     CONF_KEY_FILENAME,
@@ -74,8 +75,8 @@ PLATFORMS = [
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
     Platform.NUMBER,
-    Platform.SENSOR,
     Platform.SELECT,
+    Platform.SENSOR,
     Platform.SWITCH,
     Platform.TEXT,
 ]
@@ -114,6 +115,37 @@ RUN_ACTION_SCHEMA = vol.Schema(
 )
 
 
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Migrate old entry."""
+    _LOGGER.debug(
+        "Migrating configuration from version %s.%s",
+        entry.version,
+        entry.minor_version,
+    )
+
+    if entry.version > 1:
+        return False
+
+    if entry.version == 1:
+        new_data = {**entry.data}
+        new_options = {**entry.options}
+
+        if entry.minor_version < 2:
+            new_options[CONF_DISCONNECT_MODE] = False
+
+        hass.config_entries.async_update_entry(
+            entry, data=new_data, options=new_options, minor_version=2, version=1
+        )
+
+    _LOGGER.debug(
+        "Migration to configuration version %s.%s successful",
+        entry.version,
+        entry.minor_version,
+    )
+
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up SSH from a config entry."""
     data = entry.data
@@ -128,6 +160,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         key_filename=data.get(CONF_KEY_FILENAME),
         allow_turn_off=options[CONF_ALLOW_TURN_OFF],
         command_timeout=options[CONF_COMMAND_TIMEOUT],
+        disconnect_mode=options[CONF_DISCONNECT_MODE],
         collection=Converter(hass).get_collection(options),
         logger=_LOGGER,
     )
@@ -164,7 +197,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[entry.domain].pop(entry.entry_id)
 
         for coordinator in coordinators:
-            coordinator.stop()
+            await coordinator.async_shutdown()
 
         await entry_data.manager.async_close()
 
@@ -222,6 +255,10 @@ async def async_initialize_entry(
     hass.data[entry.domain][entry.entry_id] = entry_data
 
     await state_coordinator.async_config_entry_first_refresh()
+
+    if manager.disconnect_mode:
+        await manager.async_update_sensor_commands(force=True)
+
     await hass.config_entries.async_forward_entry_setups(entry, platforms)
 
 
@@ -244,7 +281,7 @@ def async_register_services(hass: HomeAssistant, domain: str):
         async def wrapper(entry_data: EntryData, call: ServiceCall) -> list[dict]:
             try:
                 output: CommandOutput = await coro(entry_data, call)
-            except Exception as exc:  # pylint: disable=broad-except
+            except Exception as exc:  # noqa: BLE001
                 result = {
                     "device_id": entry_data.device_entry.id,
                     "device_name": entry_data.device_entry.name,
@@ -260,6 +297,28 @@ def async_register_services(hass: HomeAssistant, domain: str):
                     "stdout": output.stdout,
                     "stderr": output.stderr,
                     "code": output.code,
+                }
+            return [result]
+
+        return wrapper
+
+    def get_generic_result(coro: Coroutine):
+        @wraps(coro)
+        async def wrapper(entry_data: EntryData, call: ServiceCall) -> list[dict]:
+            try:
+                await coro(entry_data, call)
+            except Exception as exc:  # noqa: BLE001
+                result = {
+                    "device_id": entry_data.device_entry.id,
+                    "device_name": entry_data.device_entry.name,
+                    "success": False,
+                    "error": str(exc),
+                }
+            else:
+                result = {
+                    "device_id": entry_data.device_entry.id,
+                    "device_name": entry_data.device_entry.name,
+                    "success": True,
                 }
             return [result]
 
@@ -307,23 +366,9 @@ def async_register_services(hass: HomeAssistant, domain: str):
         ]
 
     @get_response
-    async def turn_on(entry_data: EntryData, call: ServiceCall) -> list[dict]:
-        try:
-            await entry_data.state_coordinator.async_turn_on()
-        except Exception as exc:  # pylint: disable=broad-except
-            result = {
-                "device_id": entry_data.device_entry.id,
-                "device_name": entry_data.device_entry.name,
-                "success": False,
-                "error": str(exc),
-            }
-        else:
-            result = {
-                "device_id": entry_data.device_entry.id,
-                "device_name": entry_data.device_entry.name,
-                "success": True,
-            }
-        return [result]
+    @get_generic_result
+    async def turn_on(entry_data: EntryData, call: ServiceCall) -> None:
+        await entry_data.state_coordinator.async_turn_on()
 
     @get_response
     @get_command_result

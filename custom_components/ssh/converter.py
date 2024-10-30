@@ -305,7 +305,7 @@ class Converter:
         }
 
     def get_collection(self, options: dict) -> Collection:
-        """Get the collection"""
+        """Get the collection."""
         return Collection(
             "",
             [

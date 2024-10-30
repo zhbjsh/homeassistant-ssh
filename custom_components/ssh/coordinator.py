@@ -13,12 +13,21 @@ from ssh_terminal_manager import (
     SSHManager,
 )
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 FAST_UPDATE_INTERVAL = 2
 FAST_UPDATE_MAXIMUM = 60
+
+
+def stop_coordinators(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Stop all coordinators."""
+    entry_data = hass.data[entry.domain][entry.entry_id]
+    coordinators = entry_data.state_coordinator, *entry_data.command_coordinators
+    for coordinator in coordinators:
+        coordinator.stop()
 
 
 class StateCoordinator(DataUpdateCoordinator):
@@ -39,13 +48,17 @@ class StateCoordinator(DataUpdateCoordinator):
         self._manager = manager
         self._regular_update_interval = self.update_interval
         # Add listener to keep updating without any entities
-        self.stop: Callable = self.async_add_listener(lambda: None)
+        self._remove_listener: Callable = self.async_add_listener(lambda: None)
+
+    def stop(self):
+        if self._listeners:
+            self._remove_listener()
 
     async def _async_update_data(self) -> None:
         try:
             await self._manager.async_update_state()
         except (SSHAuthenticationError, SSHHostKeyUnknownError) as exc:
-            self.stop()
+            stop_coordinators(self.hass, self.config_entry)
             raise ConfigEntryAuthFailed(exc) from exc
         except Exception as exc:
             raise UpdateFailed(f"Exception updating {self.name}: {exc}") from exc
@@ -105,14 +118,24 @@ class SensorCommandCoordinator(DataUpdateCoordinator):
         self._manager = manager
         self._command = command
         # Add listener to keep updating without any entities
-        self.stop: Callable = self.async_add_listener(lambda: None)
+        self._remove_listener: Callable = self.async_add_listener(lambda: None)
+
+    def stop(self):
+        if self._listeners:
+            self._remove_listener()
 
     async def _async_update_data(self) -> None:
-        if not self._manager.state.connected:
+        if not self._manager.is_up:
             return
         try:
             await self._manager.async_execute_command(self._command)
-        except CommandError:
-            pass
+        except CommandError as exc:
+            cause = exc.__cause__
+            if isinstance(cause, (SSHAuthenticationError, SSHHostKeyUnknownError)):
+                stop_coordinators(self.hass, self.config_entry)
+                raise ConfigEntryAuthFailed(exc) from exc
+        except (SSHAuthenticationError, SSHHostKeyUnknownError) as exc:
+            stop_coordinators(self.hass, self.config_entry)
+            raise ConfigEntryAuthFailed(exc) from exc
         except Exception as exc:
             raise UpdateFailed(f"Exception updating {self.name}: {exc}") from exc

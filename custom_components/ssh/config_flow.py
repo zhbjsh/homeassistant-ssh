@@ -79,6 +79,7 @@ from .const import (
     CONF_COMMAND_SET,
     CONF_COMMAND_TIMEOUT,
     CONF_DEFAULT_COMMANDS,
+    CONF_DISCONNECT_MODE,
     CONF_DYNAMIC,
     CONF_ENTITY_REGISTRY_ENABLED_DEFAULT,
     CONF_FLOAT,
@@ -261,6 +262,7 @@ class OptionsFlow(config_entries.OptionsFlow):
     def _default_collection(self) -> Collection | None:
         if (key := self.config_entry.data[CONF_DEFAULT_COMMANDS]) != "none":
             return getattr(default_collections, key)
+        return None
 
     def validate_init(self, options: dict[str, Any]) -> dict[str, Any]:
         """Validate the options user input."""
@@ -341,7 +343,7 @@ class OptionsFlow(config_entries.OptionsFlow):
                 options = self.validate_init(user_input)
             except ValueError:
                 errors["base"] = "name_key_error"
-            except Exception:  # pylint: disable=broad-except
+            except Exception:
                 self.logger.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
@@ -357,6 +359,10 @@ class OptionsFlow(config_entries.OptionsFlow):
                     vol.Required(
                         CONF_ALLOW_TURN_OFF,
                         default=self._data[CONF_ALLOW_TURN_OFF],
+                    ): bool,
+                    vol.Required(
+                        CONF_DISCONNECT_MODE,
+                        default=self._data[CONF_DISCONNECT_MODE],
                     ): bool,
                     vol.Required(
                         CONF_RESET_COMMANDS,
@@ -417,6 +423,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for SSH."""
 
     VERSION = 1
+    MINOR_VERSION = 2
     logger = _LOGGER
     domain = DOMAIN
     _existing_entry: ConfigEntry | None = None
@@ -435,7 +442,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._data = {}
         self._options = {}
 
-    def get_mac_address(self, manager: SSHManager) -> str:
+    def get_mac_address(self, manager: SSHManager) -> str | None:
         """Get MAC address from manager."""
         if mac_address := manager.mac_address:
             self.logger.debug("Detected MAC address: %s", mac_address)
@@ -443,8 +450,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return self.validate_mac_address(mac_address)
             except MACAddressInvalidError as exc:
                 self.logger.debug(exc)
+        return None
 
-    async def async_get_hostname(self, manager: SSHManager) -> str:
+    async def async_get_hostname(self, manager: SSHManager) -> str | None:
         """Get hostname from manager."""
         if hostname := manager.hostname:
             self.logger.debug("Detected hostname: %s", hostname)
@@ -452,6 +460,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_validate_name(hostname)
             except NameExistsError as exc:
                 self.logger.debug(exc)
+        return None
 
     def get_options(self, manager: SSHManager) -> dict[str, Any]:
         """Get options from manager."""
@@ -459,6 +468,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return {
             CONF_ALLOW_TURN_OFF: manager.allow_turn_off,
+            CONF_DISCONNECT_MODE: manager.disconnect_mode,
             CONF_UPDATE_INTERVAL: DEFAULT_UPDATE_INTERVAL,
             CONF_COMMAND_TIMEOUT: manager.command_timeout,
             CONF_ACTION_COMMANDS: [
@@ -507,7 +517,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         mac_address = mac_address.strip().lower()
 
         pattern = (
-            "^([0-9A-Fa-f]{2}[:-])"
+            "^([0-9A-Fa-f]{2}[:-])"  # noqa: ISC003
             + "{5}([0-9A-Fa-f]{2})|"
             + "([0-9a-fA-F]{4}\\."
             + "[0-9a-fA-F]{4}\\."
@@ -572,7 +582,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except SSHConnectError as exc:
                 self.logger.warning(exc)
                 errors["base"] = "ssh_connect_error"
-            except Exception:  # pylint: disable=broad-except
+            except Exception:
                 self.logger.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
@@ -636,7 +646,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except MACAddressInvalidError as exc:
                 self.logger.warning(exc)
                 errors["base"] = "mac_address_invalid_error"
-            except Exception:  # pylint: disable=broad-except
+            except Exception:
                 self.logger.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
@@ -671,7 +681,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except NameExistsError as exc:
                 self.logger.warning(exc)
                 errors["base"] = "name_exists_error"
-            except Exception:  # pylint: disable=broad-except
+            except Exception:
                 self.logger.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
