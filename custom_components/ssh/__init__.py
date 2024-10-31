@@ -49,6 +49,7 @@ from .const import (
     CONF_HOST_KEYS_FILENAME,
     CONF_KEY,
     CONF_KEY_FILENAME,
+    CONF_LOAD_SYSTEM_HOST_KEYS,
     CONF_UPDATE_INTERVAL,
     DOMAIN,
     SERVICE_EXECUTE_COMMAND,
@@ -131,6 +132,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
         new_options = {**entry.options}
 
         if entry.minor_version < 2:
+            new_data[CONF_LOAD_SYSTEM_HOST_KEYS] = True
             new_options[CONF_DISCONNECT_MODE] = False
 
         hass.config_entries.async_update_entry(
@@ -158,6 +160,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         username=data.get(CONF_USERNAME),
         password=data.get(CONF_PASSWORD),
         key_filename=data.get(CONF_KEY_FILENAME),
+        host_keys_filename=data.get(CONF_HOST_KEYS_FILENAME),
+        load_system_host_keys=data[CONF_LOAD_SYSTEM_HOST_KEYS],
         allow_turn_off=options[CONF_ALLOW_TURN_OFF],
         command_timeout=options[CONF_COMMAND_TIMEOUT],
         disconnect_mode=options[CONF_DISCONNECT_MODE],
@@ -167,7 +171,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     manager.set_mac_address(data[CONF_MAC])
 
-    await manager.async_load_host_keys(data.get(CONF_HOST_KEYS_FILENAME))
+    await manager.async_load_host_keys()
 
     await async_initialize_entry(
         hass,

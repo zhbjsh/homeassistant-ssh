@@ -10,7 +10,8 @@
           "default_commands": "Default commands",
           "key_filename": "Key file",
           "host_keys_filename": "Host keys file",
-          "add_host_keys": "Automatically add key to host keys file"
+          "add_host_keys": "Automatically add key to host keys file",
+          "load_system_host_keys": "Load system host keys"
         }
       },
       "mac_address": {

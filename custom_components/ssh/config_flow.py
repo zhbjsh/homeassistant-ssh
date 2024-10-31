@@ -7,6 +7,7 @@ from typing import Any
 
 from ssh_terminal_manager import (
     DEFAULT_ADD_HOST_KEYS,
+    DEFAULT_LOAD_SYSTEM_HOST_KEYS,
     DEFAULT_PORT,
     Collection,
     OfflineError,
@@ -86,6 +87,7 @@ from .const import (
     CONF_HOST_KEYS_FILENAME,
     CONF_KEY,
     CONF_KEY_FILENAME,
+    CONF_LOAD_SYSTEM_HOST_KEYS,
     CONF_OPTIONS,
     CONF_PATTERN,
     CONF_REMOVE_CUSTOM_COMMANDS,
@@ -487,11 +489,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Validate the config user input."""
         manager = SSHManager(
             data[CONF_HOST],
-            add_host_keys=data[CONF_ADD_HOST_KEYS],
             port=data[CONF_PORT],
             username=data.get(CONF_USERNAME),
             password=data.get(CONF_PASSWORD),
             key_filename=data.get(CONF_KEY_FILENAME),
+            host_keys_filename=data.get(CONF_HOST_KEYS_FILENAME),
+            add_host_keys=data[CONF_ADD_HOST_KEYS],
+            load_system_host_keys=data[CONF_LOAD_SYSTEM_HOST_KEYS],
             collection=(
                 getattr(default_collections, key)
                 if (key := data[CONF_DEFAULT_COMMANDS]) != "none"
@@ -500,7 +504,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             logger=self.logger,
         )
 
-        await manager.async_load_host_keys(data.get(CONF_HOST_KEYS_FILENAME))
+        await manager.async_load_host_keys()
 
         async with manager:
             await manager.async_update_state(raise_errors=True)
@@ -628,6 +632,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_ADD_HOST_KEYS,
                         default=self._data.get(
                             CONF_ADD_HOST_KEYS, DEFAULT_ADD_HOST_KEYS
+                        ),
+                    ): bool,
+                    vol.Required(
+                        CONF_LOAD_SYSTEM_HOST_KEYS,
+                        default=self._data.get(
+                            CONF_LOAD_SYSTEM_HOST_KEYS, DEFAULT_LOAD_SYSTEM_HOST_KEYS
                         ),
                     ): bool,
                 }
