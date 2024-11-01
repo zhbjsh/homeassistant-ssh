@@ -54,7 +54,7 @@
       "init": {
         "data": {
           "allow_turn_off": "Allow to turn the device off",
-          "disconnect_mode": "Disconnect mode",
+          "disconnect_mode": "Disconnect between commands (experimental)",
           "reset_commands": "Reset commands",
           "update_interval": "Update interval",
           "command_timeout": "Command timeout",
