@@ -65,6 +65,7 @@ from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.device_registry import format_mac
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     ObjectSelector,
     SelectOptionDict,
     SelectSelector,
@@ -361,15 +362,11 @@ class OptionsFlow(config_entries.OptionsFlow):
                     vol.Required(
                         CONF_ALLOW_TURN_OFF,
                         default=self._data[CONF_ALLOW_TURN_OFF],
-                    ): bool,
+                    ): BooleanSelector(),
                     vol.Required(
                         CONF_DISCONNECT_MODE,
                         default=self._data[CONF_DISCONNECT_MODE],
-                    ): bool,
-                    vol.Required(
-                        CONF_RESET_COMMANDS,
-                        default=False,
-                    ): bool,
+                    ): BooleanSelector(),
                     vol.Required(
                         CONF_UPDATE_INTERVAL,
                         default=self._data[CONF_UPDATE_INTERVAL],
@@ -386,6 +383,10 @@ class OptionsFlow(config_entries.OptionsFlow):
                         CONF_SENSOR_COMMANDS,
                         default=self._data[CONF_SENSOR_COMMANDS],
                     ): ListSelector(SENSOR_COMMAND_SCHEMA),
+                    vol.Required(
+                        CONF_RESET_COMMANDS,
+                        default=False,
+                    ): BooleanSelector(),
                 }
             ),
         )
@@ -411,11 +412,11 @@ class OptionsFlow(config_entries.OptionsFlow):
                     vol.Required(
                         CONF_RESET_DEFAULT_COMMANDS,
                         default=True,
-                    ): bool,
+                    ): BooleanSelector(),
                     vol.Required(
                         CONF_REMOVE_CUSTOM_COMMANDS,
                         default=False,
-                    ): bool,
+                    ): BooleanSelector(),
                 }
             ),
         )
@@ -633,13 +634,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         default=self._data.get(
                             CONF_ADD_HOST_KEYS, DEFAULT_ADD_HOST_KEYS
                         ),
-                    ): bool,
+                    ): BooleanSelector(),
                     vol.Required(
                         CONF_LOAD_SYSTEM_HOST_KEYS,
                         default=self._data.get(
                             CONF_LOAD_SYSTEM_HOST_KEYS, DEFAULT_LOAD_SYSTEM_HOST_KEYS
                         ),
-                    ): bool,
+                    ): BooleanSelector(),
                 }
             ),
         )

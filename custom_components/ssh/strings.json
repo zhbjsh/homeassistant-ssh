@@ -55,11 +55,11 @@
         "data": {
           "allow_turn_off": "Allow to turn the device off",
           "disconnect_mode": "Disconnect between commands (experimental)",
-          "reset_commands": "Reset commands",
           "update_interval": "Update interval",
           "command_timeout": "Command timeout",
           "action_commands": "Action commands",
-          "sensor_commands": "Sensor commands"
+          "sensor_commands": "Sensor commands",
+          "reset_commands": "Reset commands"
         }
       },
       "reset_commands": {
