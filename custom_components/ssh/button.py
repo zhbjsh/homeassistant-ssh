@@ -67,10 +67,10 @@ class PowerEntity(BaseEntity, ButtonEntity):
 
     @property
     def available(self) -> bool:
-        if not self._manager.state.online:
+        if self._manager.is_down:
             return True
         if (
-            self._manager.state.connected
+            self._manager.is_up
             and self._manager.allow_turn_off
             and ActionKey.TURN_OFF in self._manager.action_commands_by_key
         ):
