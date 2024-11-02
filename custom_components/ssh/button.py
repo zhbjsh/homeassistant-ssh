@@ -78,8 +78,8 @@ class PowerEntity(BaseEntity, ButtonEntity):
         return False
 
     async def async_press(self) -> None:
-        if not self._manager.state.online:
+        if self._manager.is_down:
             await self.coordinator.async_turn_on()
 
-        elif self._manager.state.connected:
+        elif self._manager.is_up:
             await self.coordinator.async_turn_off()
