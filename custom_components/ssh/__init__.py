@@ -47,6 +47,7 @@ from .const import (
     CONF_COMMAND_TIMEOUT,
     CONF_DISCONNECT_MODE,
     CONF_HOST_KEYS_FILENAME,
+    CONF_INVOKE_SHELL,
     CONF_KEY,
     CONF_KEY_FILENAME,
     CONF_LOAD_SYSTEM_HOST_KEYS,
@@ -135,8 +136,11 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
             new_data[CONF_LOAD_SYSTEM_HOST_KEYS] = True
             new_options[CONF_DISCONNECT_MODE] = False
 
+        if entry.minor_version < 3:
+            new_data[CONF_INVOKE_SHELL] = False
+
         hass.config_entries.async_update_entry(
-            entry, data=new_data, options=new_options, minor_version=2, version=1
+            entry, data=new_data, options=new_options, minor_version=3, version=1
         )
 
     _LOGGER.debug(
@@ -162,6 +166,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         key_filename=data.get(CONF_KEY_FILENAME),
         host_keys_filename=data.get(CONF_HOST_KEYS_FILENAME),
         load_system_host_keys=data[CONF_LOAD_SYSTEM_HOST_KEYS],
+        invoke_shell=data[CONF_INVOKE_SHELL],
         allow_turn_off=options[CONF_ALLOW_TURN_OFF],
         command_timeout=options[CONF_COMMAND_TIMEOUT],
         disconnect_mode=options[CONF_DISCONNECT_MODE],

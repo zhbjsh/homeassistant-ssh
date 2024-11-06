@@ -40,6 +40,7 @@
                     "default_commands": "Default commands",
                     "host": "Host",
                     "host_keys_filename": "Host keys file",
+                    "invoke_shell": "Invoke shell (experimental)",
                     "key_filename": "Key file",
                     "load_system_host_keys": "Load system host keys",
                     "password": "Password",
