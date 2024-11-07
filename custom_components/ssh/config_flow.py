@@ -7,6 +7,7 @@ from typing import Any
 
 from ssh_terminal_manager import (
     DEFAULT_ADD_HOST_KEYS,
+    DEFAULT_INVOKE_SHELL,
     DEFAULT_LOAD_SYSTEM_HOST_KEYS,
     DEFAULT_PORT,
     Collection,
@@ -86,6 +87,7 @@ from .const import (
     CONF_ENTITY_REGISTRY_ENABLED_DEFAULT,
     CONF_FLOAT,
     CONF_HOST_KEYS_FILENAME,
+    CONF_INVOKE_SHELL,
     CONF_KEY,
     CONF_KEY_FILENAME,
     CONF_LOAD_SYSTEM_HOST_KEYS,
@@ -497,6 +499,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             host_keys_filename=data.get(CONF_HOST_KEYS_FILENAME),
             add_host_keys=data[CONF_ADD_HOST_KEYS],
             load_system_host_keys=data[CONF_LOAD_SYSTEM_HOST_KEYS],
+            invoke_shell=data[CONF_INVOKE_SHELL],
             collection=(
                 getattr(default_collections, key)
                 if (key := data[CONF_DEFAULT_COMMANDS]) != "none"
@@ -640,6 +643,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         default=self._data.get(
                             CONF_LOAD_SYSTEM_HOST_KEYS, DEFAULT_LOAD_SYSTEM_HOST_KEYS
                         ),
+                    ): BooleanSelector(),
+                    vol.Required(
+                        CONF_INVOKE_SHELL,
+                        default=self._data.get(CONF_INVOKE_SHELL, DEFAULT_INVOKE_SHELL),
                     ): BooleanSelector(),
                 }
             ),
