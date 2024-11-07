@@ -40,6 +40,7 @@
                     "default_commands": "デフォルトのコマンド",
                     "host": "ホスト",
                     "host_keys_filename": "ホスト鍵ファイル",
+                    "invoke_shell": "シェルを呼び出す（実験的）",
                     "key_filename": "鍵ファイル",
                     "load_system_host_keys": "システムのホスト鍵を読み込む",
                     "password": "パスワード",
