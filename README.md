@@ -52,6 +52,10 @@ When connecting to the device, the integration looks for its host key in the _Ho
 
 Choose the option that matches your device to have a set of default commands available after setup. This will create some sensors (CPU load, free memory, temperature, etc.) and makes it possible to shutdown and restart the device. The default commands can be modified or deleted later.
 
+##### Invoke shell (experimental)
+
+Enable this option only if the integration can't execute commands on your device, even though it works when you run the same commands manually from a terminal. It will open an interactive shell session in the background every time a command is executed. _This is an experimental feature, it is possible that some commands won't work in this mode or the returned output is not correct!_
+
 ##### MAC address
 
 After connecting to the device, setup asks you to enter the MAC address of the device. Make sure the MAC address is correct, as it is used as unique ID and to turn the device on by Wake on LAN.
