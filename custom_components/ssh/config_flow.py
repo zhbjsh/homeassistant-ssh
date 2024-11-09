@@ -11,6 +11,8 @@ from ssh_terminal_manager import (
     DEFAULT_LOAD_SYSTEM_HOST_KEYS,
     DEFAULT_PORT,
     Collection,
+    InvalidRequiredSensorError,
+    NameKeyError,
     OfflineError,
     SSHAuthenticationError,
     SSHConnectError,
@@ -346,8 +348,10 @@ class OptionsFlow(config_entries.OptionsFlow):
             self._data = user_input
             try:
                 options = self.validate_init(user_input)
-            except ValueError:
+            except NameKeyError:
                 errors["base"] = "name_key_error"
+            except InvalidRequiredSensorError:
+                errors["base"] = "invalid_required_sensor_error"
             except Exception:
                 self.logger.exception("Unexpected exception")
                 errors["base"] = "unknown"
