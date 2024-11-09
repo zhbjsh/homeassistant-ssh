@@ -428,7 +428,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for SSH."""
 
     VERSION = 1
-    MINOR_VERSION = 2
+    MINOR_VERSION = 3
     logger = _LOGGER
     domain = DOMAIN
     _existing_entry: ConfigEntry | None = None
