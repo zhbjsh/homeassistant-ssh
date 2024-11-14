@@ -72,6 +72,7 @@
       }
     },
     "error": {
+      "invalid_required_sensor_error": "Invalid required sensor",
       "name_key_error": "Name and key not defined",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     }
