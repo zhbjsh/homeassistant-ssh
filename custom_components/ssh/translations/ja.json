@@ -52,6 +52,7 @@
     },
     "options": {
         "error": {
+            "invalid_required_sensor_error": "必要なセンサーが無効です",
             "name_key_error": "名前とキーが定義されていません",
             "unknown": "予期せぬエラー"
         },
