@@ -276,12 +276,16 @@ def async_register_services(hass: HomeAssistant, domain: str):
 
     def get_response(coro: Coroutine):
         @wraps(coro)
-        async def wrapper(call: ServiceCall) -> ServiceResponse:
+        async def wrapper(call: ServiceCall) -> ServiceResponse | None:
             entry_ids = await async_extract_config_entry_ids(hass, call)
             data = await asyncio.gather(
                 *(coro(hass.data[domain][entry_id], call) for entry_id in entry_ids)
             )
-            return {"results": [result for results in data for result in results]}
+            return (
+                {"results": [result for results in data for result in results]}
+                if call.return_response
+                else None
+            )
 
         return wrapper
 
@@ -394,7 +398,7 @@ def async_register_services(hass: HomeAssistant, domain: str):
         SERVICE_EXECUTE_COMMAND,
         execute_command,
         EXECUTE_COMMAND_SCHEMA,
-        SupportsResponse.ONLY,
+        SupportsResponse.OPTIONAL,
     )
 
     hass.services.async_register(
@@ -402,7 +406,7 @@ def async_register_services(hass: HomeAssistant, domain: str):
         SERVICE_RUN_ACTION,
         run_action,
         RUN_ACTION_SCHEMA,
-        SupportsResponse.ONLY,
+        SupportsResponse.OPTIONAL,
     )
 
     hass.services.async_register(
@@ -410,7 +414,7 @@ def async_register_services(hass: HomeAssistant, domain: str):
         SERVICE_POLL_SENSOR,
         poll_sensor,
         None,
-        SupportsResponse.ONLY,
+        SupportsResponse.OPTIONAL,
     )
 
     hass.services.async_register(
@@ -418,7 +422,7 @@ def async_register_services(hass: HomeAssistant, domain: str):
         SERVICE_TURN_ON,
         turn_on,
         None,
-        SupportsResponse.ONLY,
+        SupportsResponse.OPTIONAL,
     )
 
     hass.services.async_register(
@@ -426,7 +430,7 @@ def async_register_services(hass: HomeAssistant, domain: str):
         SERVICE_TURN_OFF,
         turn_off,
         None,
-        SupportsResponse.ONLY,
+        SupportsResponse.OPTIONAL,
     )
 
     hass.services.async_register(
@@ -434,5 +438,5 @@ def async_register_services(hass: HomeAssistant, domain: str):
         SERVICE_RESTART,
         restart,
         None,
-        SupportsResponse.ONLY,
+        SupportsResponse.OPTIONAL,
     )
