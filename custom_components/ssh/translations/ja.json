@@ -1,0 +1,80 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "デバイスはすでに設定されています",
+            "reauth_successful": "再認証に成功しました",
+            "reconf_successful": "再設定に成功しました"
+        },
+        "error": {
+            "mac_address_invalid_error": "MACアドレスが無効です",
+            "name_exists_error": "名前はすでに存在します",
+            "offline_error": "ホストはオフラインです",
+            "permission_error": "ホスト鍵ファイルにアクセスするための権限がありません",
+            "ssh_authentication_error": "SSH認証に失敗しました",
+            "ssh_connect_error": "SSH接続に失敗しました",
+            "ssh_host_key_unknown_error": "SSHのホスト鍵が不明です",
+            "unknown": "予期せぬエラー"
+        },
+        "step": {
+            "mac_address": {
+                "data": {
+                    "mac_address": "MACアドレス"
+                },
+                "description": "デバイスのMACアドレスを入力してください。",
+                "title": "MACアドレス"
+            },
+            "name": {
+                "data": {
+                    "name": "名前"
+                },
+                "description": "デバイスの名前を入力してください。",
+                "title": "名前"
+            },
+            "reauth_confirm": {
+                "description": "SSH認証に失敗したかホスト鍵が不明です。設定を更新してください",
+                "title": "統合の再認証"
+            },
+            "user": {
+                "data": {
+                    "add_host_keys": "鍵をホスト鍵ファイルへ自動的に追加する",
+                    "default_commands": "デフォルトのコマンド",
+                    "host": "ホスト",
+                    "host_keys_filename": "ホスト鍵ファイル",
+                    "invoke_shell": "シェルを呼び出す（実験的）",
+                    "key_filename": "鍵ファイル",
+                    "load_system_host_keys": "システムのホスト鍵を読み込む",
+                    "password": "パスワード",
+                    "port": "ポート",
+                    "username": "ユーザー名"
+                }
+            }
+        }
+    },
+    "options": {
+        "error": {
+            "invalid_required_sensor_error": "必要なセンサーが無効です",
+            "name_key_error": "名前とキーが定義されていません",
+            "unknown": "予期せぬエラー"
+        },
+        "step": {
+            "init": {
+                "data": {
+                    "action_commands": "アクションコマンド",
+                    "allow_turn_off": "デバイスの電源オフを許可する",
+                    "command_timeout": "コマンドのタイムアウト",
+                    "disconnect_mode": "コマンドの間に切断する（実験的）",
+                    "reset_commands": "コマンドをリセットする",
+                    "sensor_commands": "センサーコマンド",
+                    "update_interval": "更新間隔"
+                }
+            },
+            "reset_commands": {
+                "title": "コマンドをリセットする",
+                "data": {
+                  "reset_default_commands": "デフォルトのコマンドをリセットする",
+                  "remove_custom_commands": "すべてのカスタムコマンドを削除する"
+                }
+              }
+        }
+    }
+}
