@@ -23,7 +23,7 @@ execute_command:
           unit_of_measurement: "s"
     variables:
       name: Variables
-      description: "Variables to pass to the command. Example: A variable `name` can be used inside the command as `@variable{name}`."
+      description: "Variables to pass to the command. Example: A variable `name` can be used inside the command as `@{name}`."
       selector:
         object:
 
