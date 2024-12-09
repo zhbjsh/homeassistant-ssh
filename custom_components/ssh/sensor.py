@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 
-from ssh_terminal_manager import BinarySensor, NumberSensor, TextSensor
+from ssh_terminal_manager import BinarySensor, NumberSensor, TextSensor, VersionSensor
 
 from homeassistant.components.sensor import (
     ENTITY_ID_FORMAT,
@@ -46,8 +46,23 @@ async def async_get_entities(
     ignored_keys = entry_data.ignored_sensor_keys
     entities = []
 
-    for sensor in entry_data.manager.sensors_by_key.values():
-        if isinstance(sensor, BinarySensor) or sensor.controllable:
+    latest_keys = {
+        sensor.latest
+        for sensor in entry_data.manager.sensors_by_key.values()
+        if isinstance(sensor, VersionSensor)
+    }
+
+    for sensor in (sensors_by_key := entry_data.manager.sensors_by_key).values():
+        if (
+            isinstance(sensor, BinarySensor)
+            or (
+                isinstance(sensor, VersionSensor)
+                and sensor.latest
+                and sensors_by_key.get(sensor.latest)
+            )
+            or sensor.controllable
+            or sensor.key in latest_keys
+        ):
             continue
         if ignored_keys and sensor.key in ignored_keys:
             continue

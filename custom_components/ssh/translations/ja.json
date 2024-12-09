@@ -52,7 +52,8 @@
     },
     "options": {
         "error": {
-            "invalid_required_sensor_error": "必要なセンサーが無効です",
+            "command_loop_error": "Command loop detected",
+            "invalid_sensor_error": "Invalid sensor",
             "name_key_error": "名前とキーが定義されていません",
             "unknown": "予期せぬエラー"
         },

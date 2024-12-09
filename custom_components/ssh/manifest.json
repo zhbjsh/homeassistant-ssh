@@ -11,9 +11,9 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/zhbjsh/homeassistant-ssh/issues",
   "requirements": [
-    "ssh-terminal-manager==1.1.4"
+    "ssh-terminal-manager==1.1.5"
   ],
   "ssdp": [],
-  "version": "1.0.1",
+  "version": "1.2.0",
   "zeroconf": []
 }

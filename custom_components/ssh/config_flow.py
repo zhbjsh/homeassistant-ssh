@@ -11,7 +11,8 @@ from ssh_terminal_manager import (
     DEFAULT_LOAD_SYSTEM_HOST_KEYS,
     DEFAULT_PORT,
     Collection,
-    InvalidRequiredSensorError,
+    CommandLoopError,
+    InvalidSensorError,
     NameKeyError,
     OfflineError,
     SSHAuthenticationError,
@@ -40,6 +41,9 @@ from homeassistant.components.switch import (
     DEVICE_CLASSES_SCHEMA as SWITCH_DEVICE_CLASSES_SCHEMA,
 )
 from homeassistant.components.text import TextMode
+from homeassistant.components.update import (
+    DEVICE_CLASSES_SCHEMA as UPDATE_DEVICE_CLASSES_SCHEMA,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_COMMAND,
@@ -92,6 +96,7 @@ from .const import (
     CONF_INVOKE_SHELL,
     CONF_KEY,
     CONF_KEY_FILENAME,
+    CONF_LATEST,
     CONF_LOAD_SYSTEM_HOST_KEYS,
     CONF_OPTIONS,
     CONF_PATTERN,
@@ -136,6 +141,11 @@ def validate_sensor(data: dict) -> dict:
             return BINARY_SENSOR_SCHEMA(data)
         return CONTROLLABLE_BINARY_SENSOR_SCHEMA(data)
 
+    if sensor_type == "version":
+        if not data.get(CONF_LATEST):
+            return TEXT_SENSOR_SCHEMA(data)
+        return UPDATE_SCHEMA(data)
+
     if sensor_type == "none":
         return data
 
@@ -162,17 +172,17 @@ ACTION_COMMAND_SCHEMA = COMMAND_SCHEMA.extend(
 SENSOR_COMMAND_SCHEMA = COMMAND_SCHEMA.extend(
     {
         vol.Optional(CONF_SCAN_INTERVAL): int,
+        vol.Optional(CONF_SEPARATOR): str,
         vol.Required(CONF_SENSORS): vol.Schema([validate_sensor]),
     }
 )
 
 SENSOR_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_TYPE): vol.Any("text", "number", "binary", "none"),
+        vol.Required(CONF_TYPE): vol.Any("text", "number", "binary", "version", "none"),
         vol.Optional(CONF_NAME): str,
         vol.Optional(CONF_KEY): str,
         vol.Optional(CONF_DYNAMIC): bool,
-        vol.Optional(CONF_SEPARATOR): str,
         vol.Optional(CONF_UNIT_OF_MEASUREMENT): str,
         vol.Optional(CONF_VALUE_TEMPLATE): str,
         vol.Optional(CONF_COMMAND_SET): str,
@@ -230,6 +240,13 @@ CONTROLLABLE_BINARY_SENSOR_SCHEMA = BINARY_SENSOR_SCHEMA.extend(
     }
 )
 
+UPDATE_SCHEMA = TEXT_SENSOR_SCHEMA.extend(
+    {
+        vol.Required(CONF_LATEST): str,
+        vol.Optional(CONF_DEVICE_CLASS): UPDATE_DEVICE_CLASSES_SCHEMA,
+    }
+)
+
 DEFAULT_COMMANDS_SELECTOR = SelectSelector(
     SelectSelectorConfig(
         mode=SelectSelectorMode.DROPDOWN,
@@ -262,7 +279,7 @@ class OptionsFlow(config_entries.OptionsFlow):
     logger = _LOGGER
 
     def __init__(self, config_entry: ConfigEntry) -> None:
-        self.config_entry = config_entry
+        # self.config_entry = config_entry
         self._data = config_entry.options.copy()
 
     @property
@@ -350,8 +367,10 @@ class OptionsFlow(config_entries.OptionsFlow):
                 options = self.validate_init(user_input)
             except NameKeyError:
                 errors["base"] = "name_key_error"
-            except InvalidRequiredSensorError:
-                errors["base"] = "invalid_required_sensor_error"
+            except CommandLoopError:
+                errors["base"] = "command_loop_error"
+            except InvalidSensorError:
+                errors["base"] = "invalid_sensor_error"
             except Exception:
                 self.logger.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -431,8 +450,8 @@ class OptionsFlow(config_entries.OptionsFlow):
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for SSH."""
 
-    VERSION = 1
-    MINOR_VERSION = 3
+    VERSION = 2
+    MINOR_VERSION = 1
     logger = _LOGGER
     domain = DOMAIN
     _existing_entry: ConfigEntry | None = None

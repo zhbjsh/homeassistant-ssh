@@ -72,7 +72,8 @@
       }
     },
     "error": {
-      "invalid_required_sensor_error": "Invalid required sensor",
+      "command_loop_error": "Command loop detected",
+      "invalid_sensor_error": "Invalid sensor",
       "name_key_error": "Name and key not defined",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     }

@@ -1,12 +1,17 @@
-"""Platform for text integration."""
+"""Platform for update integration."""
 
 from __future__ import annotations
 
+from typing import Any
+
 from ssh_terminal_manager import TextSensor, VersionSensor
 
-from homeassistant.components.text import ENTITY_ID_FORMAT, TextEntity, TextMode
+from homeassistant.components.update import (
+    ENTITY_ID_FORMAT,
+    UpdateEntity,
+    UpdateEntityFeature,
+)
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_MODE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -21,7 +26,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the text platform."""
+    """Set up the update platform."""
     entry_data: EntryData = hass.data[entry.domain][entry.entry_id]
     entities = await async_get_entities(hass, entry_data)
     async_add_entities(entities)
@@ -30,8 +35,8 @@ async def async_setup_entry(
 async def async_get_entities(
     hass: HomeAssistant,
     entry_data: EntryData,
-) -> list[TextEntity]:
-    """Get text entities."""
+) -> list[UpdateEntity]:
+    """Get update entities."""
     platform = entity_platform.async_get_current_platform()
     handle_child_add = get_child_add_handler(hass, platform, entry_data, Entity)
     handle_child_remove = get_child_remove_handler(hass, platform, entry_data, Entity)
@@ -40,14 +45,9 @@ async def async_get_entities(
 
     for sensor in (sensors_by_key := entry_data.manager.sensors_by_key).values():
         if not (
-            isinstance(sensor, TextSensor)
-            and not (
-                isinstance(sensor, VersionSensor)
-                and sensor.latest
-                and sensors_by_key.get(sensor.latest)
-            )
-            and sensor.controllable
-            and not sensor.options
+            isinstance(sensor, VersionSensor)
+            and sensor.latest
+            and sensors_by_key.get(sensor.latest)
         ):
             continue
         if ignored_keys and sensor.key in ignored_keys:
@@ -61,33 +61,45 @@ async def async_get_entities(
     return entities
 
 
-class Entity(BaseSensorEntity, TextEntity):
+class Entity(BaseSensorEntity, UpdateEntity):
     _entity_id_format = ENTITY_ID_FORMAT
-    _sensor: TextSensor
+    _sensor: VersionSensor
 
     @property
-    def native_value(self) -> str | None:
+    def _latest_sensor(self) -> TextSensor | None:
+        return self._manager.sensors_by_key.get(self._sensor.latest)
+
+    @property
+    def supported_features(self) -> UpdateEntityFeature:
+        if self._sensor.controllable:
+            return UpdateEntityFeature.INSTALL
+        return UpdateEntityFeature(0)
+
+    @property
+    def title(self) -> str:
+        return self.name
+
+    @property
+    def installed_version(self) -> str:
         return self._sensor.value
 
     @property
-    def native_max(self) -> int:
-        if self._sensor.maximum is not None:
-            return int(self._sensor.maximum)
-        return 100
+    def latest_version(self) -> str | None:
+        return self._latest_sensor.value
 
-    @property
-    def native_min(self) -> int:
-        if self._sensor.minimum is not None:
-            return int(self._sensor.minimum)
-        return 0
+    def version_is_newer(self, latest_version: str, installed_version: str) -> bool:
+        return latest_version != installed_version
 
-    @property
-    def pattern(self) -> str | None:
-        return self._sensor.pattern
-
-    @property
-    def mode(self) -> TextMode:
-        return self._attributes.get(CONF_MODE, TextMode.TEXT)
-
-    async def async_set_value(self, value: str) -> None:
+    async def async_install(
+        self, version: str | None, backup: bool, **kwargs: Any
+    ) -> entity_platform.Coroutine[Any, Any, None]:
+        value = version or self._latest_sensor.value
         await self._manager.async_set_sensor_value(self.key, value)
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self._latest_sensor.on_update.subscribe(self._handle_sensor_update)
+
+    async def async_will_remove_from_hass(self) -> None:
+        await super().async_will_remove_from_hass()
+        self._latest_sensor.on_update.unsubscribe(self._handle_sensor_update)

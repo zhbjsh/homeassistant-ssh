@@ -12,6 +12,7 @@ from ssh_terminal_manager import (
     SensorCommand,
     SensorKey,
     TextSensor,
+    VersionSensor,
 )
 
 from homeassistant.components.button import ButtonDeviceClass
@@ -43,6 +44,7 @@ from .const import (
     CONF_ENTITY_REGISTRY_ENABLED_DEFAULT,
     CONF_FLOAT,
     CONF_KEY,
+    CONF_LATEST,
     CONF_OPTIONS,
     CONF_PATTERN,
     CONF_SENSOR_COMMANDS,
@@ -135,7 +137,6 @@ class Converter:
                 CONF_NAME: sensor.name,
                 CONF_KEY: sensor.key,
                 CONF_DYNAMIC: sensor.dynamic is True or None,
-                CONF_SEPARATOR: sensor.separator,
                 CONF_UNIT_OF_MEASUREMENT: sensor.unit,
                 CONF_COMMAND_SET: sensor.command_set.string
                 if sensor.command_set
@@ -148,7 +149,6 @@ class Converter:
             "name": data.get(CONF_NAME),
             "key": data.get(CONF_KEY),
             "dynamic": data.get(CONF_DYNAMIC, False),
-            "separator": data.get(CONF_SEPARATOR),
             "unit": data.get(CONF_UNIT_OF_MEASUREMENT),
             "renderer": get_value_renderer(self._hass, value_template)
             if (value_template := data.get(CONF_VALUE_TEMPLATE))
@@ -231,6 +231,21 @@ class Converter:
             "payload_off": data.get(CONF_PAYLOAD_OFF),
         }
 
+    def _get_version_sensor_config(self, sensor: VersionSensor) -> dict:
+        return remove_none_items(
+            {
+                **self._get_text_sensor_config(sensor),
+                CONF_TYPE: "version",
+                CONF_LATEST: sensor.latest,
+            }
+        )
+
+    def _get_version_sensor_kwargs(self, data: dict) -> dict:
+        return {
+            **self._get_text_sensor_kwargs(data),
+            "latest": data.get(CONF_LATEST),
+        }
+
     def _get_command_config(self, command: Command) -> dict:
         return remove_none_items(
             {
@@ -274,6 +289,7 @@ class Converter:
             {
                 **self._get_command_config(command),
                 CONF_SCAN_INTERVAL: command.interval,
+                CONF_SEPARATOR: command.separator,
                 CONF_SENSORS: [
                     self._get_text_sensor_config(sensor)
                     if isinstance(sensor, TextSensor)
@@ -281,6 +297,8 @@ class Converter:
                     if isinstance(sensor, NumberSensor)
                     else self._get_binary_sensor_config(sensor)
                     if isinstance(sensor, BinarySensor)
+                    else self._get_version_sensor_config(sensor)
+                    if isinstance(sensor, VersionSensor)
                     else {CONF_TYPE: "none"}
                     for sensor in command.sensors
                 ],
@@ -292,6 +310,7 @@ class Converter:
         return {
             **self._get_command_kwargs(data),
             "interval": data.get(CONF_SCAN_INTERVAL),
+            "separator": data.get(CONF_SEPARATOR),
             "sensors": [
                 TextSensor(**self._get_text_sensor_kwargs(sensor_data))
                 if sensor_data[CONF_TYPE] == "text"
@@ -299,6 +318,8 @@ class Converter:
                 if sensor_data[CONF_TYPE] == "number"
                 else BinarySensor(**self._get_binary_sensor_kwargs(sensor_data))
                 if sensor_data[CONF_TYPE] == "binary"
+                else VersionSensor(**self._get_version_sensor_kwargs(sensor_data))
+                if sensor_data[CONF_TYPE] == "version"
                 else Sensor(key=PLACEHOLDER_KEY)
                 for sensor_data in data[CONF_SENSORS]
             ],

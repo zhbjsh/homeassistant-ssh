@@ -46,11 +46,15 @@ from .const import (
     CONF_ALLOW_TURN_OFF,
     CONF_COMMAND_TIMEOUT,
     CONF_DISCONNECT_MODE,
+    CONF_DYNAMIC,
     CONF_HOST_KEYS_FILENAME,
     CONF_INVOKE_SHELL,
     CONF_KEY,
     CONF_KEY_FILENAME,
     CONF_LOAD_SYSTEM_HOST_KEYS,
+    CONF_SENSOR_COMMANDS,
+    CONF_SENSORS,
+    CONF_SEPARATOR,
     CONF_UPDATE_INTERVAL,
     DOMAIN,
     SERVICE_EXECUTE_COMMAND,
@@ -81,6 +85,7 @@ PLATFORMS = [
     Platform.SENSOR,
     Platform.SWITCH,
     Platform.TEXT,
+    Platform.UPDATE,
 ]
 
 DEVICE_SENSOR_KEYS = [
@@ -117,6 +122,15 @@ RUN_ACTION_SCHEMA = vol.Schema(
 )
 
 
+def _update_sensor_commands(command_configs: list[dict[str, list[dict]]]):
+    for command_config in command_configs:
+        for sensor_config in reversed(command_config[CONF_SENSORS]):
+            if separator := sensor_config.get(CONF_SEPARATOR):
+                sensor_config.pop(CONF_SEPARATOR)
+                if sensor_config.get(CONF_DYNAMIC):
+                    command_config[CONF_SEPARATOR] = separator
+
+
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Migrate old entry."""
     _LOGGER.debug(
@@ -125,7 +139,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
         entry.minor_version,
     )
 
-    if entry.version > 1:
+    if entry.version > 2:
         return False
 
     if entry.version == 1:
@@ -139,8 +153,17 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
         if entry.minor_version < 3:
             new_data[CONF_INVOKE_SHELL] = False
 
+        if entry.minor_version < 4:
+            for command_config in new_options[CONF_SENSOR_COMMANDS]:
+                for sensor_config in reversed(command_config[CONF_SENSORS]):
+                    if not (separator := sensor_config.get(CONF_SEPARATOR)):
+                        continue
+                    sensor_config.pop(CONF_SEPARATOR)
+                    if sensor_config.get(CONF_DYNAMIC):
+                        command_config[CONF_SEPARATOR] = separator
+
         hass.config_entries.async_update_entry(
-            entry, data=new_data, options=new_options, minor_version=3, version=1
+            entry, data=new_data, options=new_options, minor_version=1, version=2
         )
 
     _LOGGER.debug(
