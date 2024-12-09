@@ -136,6 +136,7 @@ Sensor commands are executed automatically when the device connects or when thei
 | Name            | Description                                                                                  | Type    | Required | Default |
 | --------------- | -------------------------------------------------------------------------------------------- | ------- | -------- | ------- |
 | `scan_interval` | The scan interval. Without it, the command will only execute every time the device connects. | integer | no       |         |
+| `separator`     | Separator in the command output between ID and value for dynamic sensors.                    | string  | no       |         |
 | `sensors`       | A list of sensors.                                                                           | list    | yes      |         |
 
 ### Sensors
@@ -148,7 +149,7 @@ Static sensors are created by default. Each static sensor gets its value from on
 
 ##### Dynamic sensors
 
-Dynamic sensors are created with `dynamic: true`. They can get a variable number of values from the command output and create a "child sensor" for each one of them. To be able to use a dynamic sensor, each line of the command output must contain ID and value of a child sensor with either one or more spaces between them, or a `separator` defined with the sensor ([example](#files-in-a-folder)).
+Dynamic sensors are created with `dynamic: true`. They can get a variable number of values from the command output and create a "child sensor" for each one of them. To be able to use a dynamic sensor, each line of the command output must contain ID and value of a child sensor with either one or more spaces between them, or a `separator` defined with the command ([example](#files-in-a-folder)).
 
 ##### Controllable sensors
 
@@ -162,7 +163,6 @@ Both static and dynamic sensors can be made controllable by adding a `command_se
 | `name`                            | The name of the entity.                                                                                                          | string  | If no `key` specified  |                  |
 | `key`                             | The sensor key (can be used in commands).                                                                                        | string  | If no `name` specified | Slugified `name` |
 | `dynamic`                         | Set `true` to create a dynamic sensor.                                                                                           | boolean | no                     | `false`          |
-| `separator`                       | Separator between ID and value in the command output (only for dynamic sensors).                                                 | string  | no                     |                  |
 | `unit_of_measurement`             | The unit of the sensor value.                                                                                                    | string  | no                     |                  |
 | `value_template`                  | [Template](https://www.home-assistant.io/docs/configuration/templating) to render the sensor value ([example](#uptime-in-days)). | string  | no                     |                  |
 | `command_set`                     | Command to set the sensor value (creates a controllable sensor).                                                                 | string  | no                     |                  |
@@ -357,11 +357,11 @@ Example of a sensor command with dynamic sensor. Each line of the output contain
 # Sensor command with dynamic sensor
 - command: ls -lp /path/to/folder/ | awk 'NR>1 && !/\// {print $NF "," $5}'
   scan_interval: 600
+  separator: ","
   sensors:
     - type: number
       name: File
       dynamic: true
-      separator: ","
       unit_of_measurement: B
       suggested_unit_of_measurement: MB
       suggested_display_precision: 3
@@ -384,11 +384,11 @@ Dynamic sensors can be controllable as well. This command returns name and statu
 # Sensor command with controllable dynamic sensor
 - command: systemctl -a | awk '/bluetooth.service|smbd.service/ {print $1 "," $4}'
   scan_interval: 300
+  separator: ","
   sensors:
     - type: binary
       key: service
       dynamic: true
-      separator: ","
       command_on: systemctl start @{id}
       command_off: systemctl stop @{id}
       payload_on: running
