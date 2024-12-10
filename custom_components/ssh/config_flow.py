@@ -279,7 +279,7 @@ class OptionsFlow(config_entries.OptionsFlow):
     logger = _LOGGER
 
     def __init__(self, config_entry: ConfigEntry) -> None:
-        # self.config_entry = config_entry
+        super().__init__()
         self._data = config_entry.options.copy()
 
     @property
