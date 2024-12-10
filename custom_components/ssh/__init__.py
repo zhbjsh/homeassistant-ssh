@@ -122,15 +122,6 @@ RUN_ACTION_SCHEMA = vol.Schema(
 )
 
 
-def _update_sensor_commands(command_configs: list[dict[str, list[dict]]]):
-    for command_config in command_configs:
-        for sensor_config in reversed(command_config[CONF_SENSORS]):
-            if separator := sensor_config.get(CONF_SEPARATOR):
-                sensor_config.pop(CONF_SEPARATOR)
-                if sensor_config.get(CONF_DYNAMIC):
-                    command_config[CONF_SEPARATOR] = separator
-
-
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Migrate old entry."""
     _LOGGER.debug(
