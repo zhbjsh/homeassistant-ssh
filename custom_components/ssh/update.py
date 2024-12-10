@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ssh_terminal_manager import TextSensor, VersionSensor
+from ssh_terminal_manager import VersionSensor
 
 from homeassistant.components.update import (
     ENTITY_ID_FORMAT,
@@ -65,9 +65,9 @@ class Entity(BaseSensorEntity, UpdateEntity):
     _entity_id_format = ENTITY_ID_FORMAT
     _sensor: VersionSensor
 
-    @property
-    def _latest_sensor(self) -> TextSensor | None:
-        return self._manager.sensors_by_key.get(self._sensor.latest)
+    def __init__(self, entry_data: EntryData, sensor: VersionSensor) -> None:
+        super().__init__(entry_data, sensor)
+        self._latest_sensor = self._manager.sensors_by_key.get(sensor.latest)
 
     @property
     def supported_features(self) -> UpdateEntityFeature:
@@ -85,7 +85,7 @@ class Entity(BaseSensorEntity, UpdateEntity):
 
     @property
     def latest_version(self) -> str | None:
-        return self._latest_sensor.value
+        return self._latest_sensor.value if self._latest_sensor else None
 
     def version_is_newer(self, latest_version: str, installed_version: str) -> bool:
         return latest_version != installed_version
@@ -93,13 +93,15 @@ class Entity(BaseSensorEntity, UpdateEntity):
     async def async_install(
         self, version: str | None, backup: bool, **kwargs: Any
     ) -> entity_platform.Coroutine[Any, Any, None]:
-        value = version or self._latest_sensor.value
+        value = version or self.latest_version
         await self._manager.async_set_sensor_value(self.key, value)
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
-        self._latest_sensor.on_update.subscribe(self._handle_sensor_update)
+        if self._latest_sensor:
+            self._latest_sensor.on_update.subscribe(self._handle_sensor_update)
 
     async def async_will_remove_from_hass(self) -> None:
         await super().async_will_remove_from_hass()
-        self._latest_sensor.on_update.unsubscribe(self._handle_sensor_update)
+        if self._latest_sensor:
+            self._latest_sensor.on_update.unsubscribe(self._handle_sensor_update)
