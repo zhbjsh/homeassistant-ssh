@@ -306,8 +306,8 @@ class OptionsFlow(config_entries.OptionsFlow):
         if self._default_collection:
             collection = Collection(
                 "",
-                action_commands=self._default_collection.action_commands,
-                sensor_commands=self._default_collection.sensor_commands,
+                self._default_collection.action_commands,
+                self._default_collection.sensor_commands,
             )
         else:
             collection = Collection("")
@@ -361,16 +361,20 @@ class OptionsFlow(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Manage the options."""
         errors: dict[str, str] = {}
+        placeholders: dict[str, str] = {}
         if user_input is not None:
             self._data = user_input
             try:
                 options = self.validate_init(user_input)
             except NameKeyError:
                 errors["base"] = "name_key_error"
-            except CommandLoopError:
+            except CommandLoopError as exc:
                 errors["base"] = "command_loop_error"
-            except InvalidSensorError:
+                placeholders["details"] = f"({exc.details})"
+            except InvalidSensorError as exc:
                 errors["base"] = "invalid_sensor_error"
+                placeholders["key"] = exc.key
+                placeholders["details"] = f"({exc.details})"
             except Exception:
                 self.logger.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -382,6 +386,7 @@ class OptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="init",
             errors=errors,
+            description_placeholders=placeholders,
             data_schema=vol.Schema(
                 {
                     vol.Required(
@@ -594,25 +599,25 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
+        placeholders: dict[str, str] = {}
         if user_input is not None:
             self._data = user_input
             try:
                 self._data, self._options = await self.async_validate_user(user_input)
-            except PermissionError as exc:
+            except PermissionError:
                 errors["base"] = "permission_error"
-                self.logger.warning(exc)
             except OfflineError as exc:
                 errors["base"] = "offline_error"
-                self.logger.warning(exc)
+                placeholders["host"] = exc.host
             except SSHHostKeyUnknownError as exc:
-                self.logger.warning(exc)
                 errors["base"] = "ssh_host_key_unknown_error"
+                placeholders["host"] = exc.host
             except SSHAuthenticationError as exc:
-                self.logger.warning(exc)
                 errors["base"] = "ssh_authentication_error"
+                placeholders["details"] = f"({exc.details})" if exc.details else ""
             except SSHConnectError as exc:
-                self.logger.warning(exc)
                 errors["base"] = "ssh_connect_error"
+                placeholders["details"] = f"({exc.details})" if exc.details else ""
             except Exception:
                 self.logger.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -622,6 +627,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             errors=errors,
+            description_placeholders=placeholders,
             data_schema=vol.Schema(
                 {
                     vol.Required(
@@ -684,8 +690,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._data[CONF_MAC] = user_input[CONF_MAC]
             try:
                 self._data[CONF_MAC] = self.validate_mac_address(user_input[CONF_MAC])
-            except MACAddressInvalidError as exc:
-                self.logger.warning(exc)
+            except MACAddressInvalidError:
                 errors["base"] = "mac_address_invalid_error"
             except Exception:
                 self.logger.exception("Unexpected exception")
@@ -719,8 +724,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._data[CONF_NAME] = await self.async_validate_name(
                     user_input[CONF_NAME]
                 )
-            except NameExistsError as exc:
-                self.logger.warning(exc)
+            except NameExistsError:
                 errors["base"] = "name_exists_error"
             except Exception:
                 self.logger.exception("Unexpected exception")

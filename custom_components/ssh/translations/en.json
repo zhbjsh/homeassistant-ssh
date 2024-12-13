@@ -8,11 +8,11 @@
         "error": {
             "mac_address_invalid_error": "MAC address is invalid",
             "name_exists_error": "Name exists already",
-            "offline_error": "Host is offline",
+            "offline_error": "Host {host} is offline",
             "permission_error": "No permission to access host keys file",
-            "ssh_authentication_error": "SSH authentication failed",
-            "ssh_connect_error": "SSH connection failed",
-            "ssh_host_key_unknown_error": "SSH host key is unknown",
+            "ssh_authentication_error": "SSH authentication failed {details}",
+            "ssh_connect_error": "SSH connection failed {details}",
+            "ssh_host_key_unknown_error": "SSH host key of {host} is unknown",
             "unknown": "Unexpected error"
         },
         "step": {
@@ -52,8 +52,8 @@
     },
     "options": {
         "error": {
-            "command_loop_error": "Command loop detected",
-            "invalid_sensor_error": "Invalid sensor",
+            "command_loop_error": "Command loop detected {details}",
+            "invalid_sensor_error": "Sensor ''{key}'' is invalid {details}",
             "name_key_error": "Name and key not defined",
             "unknown": "Unexpected error"
         },
