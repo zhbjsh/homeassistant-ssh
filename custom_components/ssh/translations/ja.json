@@ -8,11 +8,11 @@
         "error": {
             "mac_address_invalid_error": "MACアドレスが無効です",
             "name_exists_error": "名前はすでに存在します",
-            "offline_error": "Host {host} is offline",
+            "offline_error": "ホスト {host} はオフラインです",
             "permission_error": "ホスト鍵ファイルにアクセスするための権限がありません",
-            "ssh_authentication_error": "SSH authentication failed {details}",
-            "ssh_connect_error": "SSH connection failed {details}",
-            "ssh_host_key_unknown_error": "SSH host key of {host} is unknown",
+            "ssh_authentication_error": "SSHの認証に失敗しました: {details}",
+            "ssh_connect_error": "SSHの接続に失敗しました: {details}",
+            "ssh_host_key_unknown_error": "{host} のSSHホスト鍵が不明です",
             "unknown": "予期せぬエラー"
         },
         "step": {
@@ -52,8 +52,8 @@
     },
     "options": {
         "error": {
-            "command_loop_error": "Command loop detected {details}",
-            "invalid_sensor_error": "Sensor {key} is invalid {details}",
+            "command_loop_error": "コマンドのループが検出されました: {details}",
+            "invalid_sensor_error": "センサー {key} は無効です: {details}",
             "name_key_error": "名前とキーが定義されていません",
             "unknown": "予期せぬエラー"
         },
