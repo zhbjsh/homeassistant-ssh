@@ -147,9 +147,15 @@ Sensors are updated every time their command executes. Depending on type and con
 
 Static sensors are created by default. Each static sensor gets its value from one line of the command output. Static sensors must therefore be defined in the right order ([example](#sensor-command-with-multiple-static-sensors)).
 
+Static sensors can only be placed before, but not after dynamic sensors.
+
 ##### Dynamic sensors
 
 Dynamic sensors are created with `dynamic: true`. They can get a variable number of values from the command output and create a "child sensor" for each one of them. To be able to use a dynamic sensor, each line of the command output must contain ID and value of a child sensor with either one or more spaces between them, or a `separator` defined with the command ([example](#files-in-a-folder)).
+
+Since version 1.2.1 it is possible to have multiple dynamic sensors in one command. The command must then provide a value for each dynamic sensor on the same output line ([example](#docker-containers)).
+
+In case the child sensor ID is not useful to display in Home Assistant, the last output column can contain names to overwrite the IDs as entity names ([example](#docker-containers)).
 
 ##### Controllable sensors
 
@@ -212,6 +218,17 @@ Sensors with `type: binary` appear as [binary sensor](https://www.home-assistant
 | `payload_on`  | String to detect a `true` sensor value.                                             | string | no       |         |
 | `payload_off` | String to detect a `false` sensor value.                                            | string | no       |         |
 
+#### Version type
+
+Sensors with `type: version` appear as [sensor](https://www.home-assistant.io/integrations/sensor) (without `latest` attribute) or [update](https://www.home-assistant.io/integrations/update) entities in Home Assistant.
+
+##### Configuration
+
+| Name     | Description                                                                                                                                                | Type   | Required | Default |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------- | ------- |
+| `latest` | Key of another version sensor to get the latest version (creates an [update](https://www.home-assistant.io/integrations/update) entity). | string | no       |         |
+
+
 ### Examples
 
 #### Execute a script
@@ -272,6 +289,7 @@ In this command, the sensor uses a `value_template` to transform the command out
 ```yaml
 # Sensor command with static sensor and value template
 - command: cat /proc/uptime | awk '{print $1}'
+  scan_interval: 300
   sensors:
     - type: number
       name: Uptime
@@ -334,6 +352,7 @@ This command returns the current value of the `log_level` setting in a config fi
 ```yaml
 # Sensor command with controllable static sensor
 - command: cat /etc/app.conf | awk -F "=" '/^log_level/ {print $2}'
+  scan_interval: 300
   sensors:
     - type: text
       name: Log level
@@ -347,6 +366,30 @@ This command returns the current value of the `log_level` setting in a config fi
 ```shell
 # Example output
 debug
+```
+
+#### Package version
+
+Version sensors can be used to create update entities. Two separate sensors are needed: One for the currently installed version and one for the latest available version. They are linked by setting the key of the latest version sensor as `latest` attribute of the installed version sensor. To be able to install updates from Home Assistant, `command_set` must be defined in the installed version sensor.
+
+```yaml
+# Sensor command with two version sensors to generate an update entity
+- command: apt-get update >/dev/null 2>&1 && apt-cache policy apache2 | awk 'NR>1 && NR<4 {print $2}'
+  scan_interval: 86400
+  sensors:
+    - type: version
+      name: Apache
+      command_set: apt-get install apache2=@{value} -y
+      latest: apache_latest
+    - type: version
+      name: Apache latest
+      key: apache_latest
+```
+
+```shell
+# Example output
+2.4.62-1~deb11u2
+2.4.62-1~deb11u2
 ```
 
 #### Files in a folder
@@ -398,6 +441,35 @@ Dynamic sensors can be controllable as well. This command returns name and statu
 # Example output
 bluetooth.service,running
 smbd.service,dead
+```
+
+#### Docker containers
+
+This example uses two dynamic sensors in the same command to create a switch entity plus one status sensor for each docker container. The command output must provide the following data on each line: ID, value sensor 1, value sensor 2. In addition to that, the last output column is used to display container names instead of IDs in Home Assistant.
+
+The outer `{{'...'}}` in the command is a workarround to avoid the interpretation of the double curly braces as templates.
+
+```yaml
+# Sensor command with multiple dynamic sensors and name field
+- command: docker ps -a --format 'table {{'{{.ID}},{{.State}},{{.Status}},{{.Names}}'}}' | tail -n +2
+  scan_interval: 60
+  separator: ","
+  sensors:
+    - type: binary
+      name: Container
+      dynamic: true
+      command_on: docker container start @{id}
+      command_off: docker container stop @{id}
+      payload_on: running
+    - type: text
+      name: Container status
+      dynamic: true
+```
+
+```shell
+# Example output
+5d9ba26d9440,running,Up 24 hours,happy_kilby
+4b73340d977f,exited,Exited (0) 11 minutes ago,serene_joliot
 ```
 
 ## Services
