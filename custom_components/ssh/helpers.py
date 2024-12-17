@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 from ssh_terminal_manager import Sensor, SensorKey
 
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceRegistry
 from homeassistant.helpers.entity_platform import EntityPlatform
 from homeassistant.helpers.template import Template
