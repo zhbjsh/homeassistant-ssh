@@ -143,7 +143,7 @@ def validate_sensor(data: dict) -> dict:
 
     if sensor_type == "version":
         if not data.get(CONF_LATEST):
-            return TEXT_SENSOR_SCHEMA(data)
+            return VERSION_SENSOR_SCHEMA(data)
         return UPDATE_SCHEMA(data)
 
     if sensor_type == "none":
@@ -240,7 +240,9 @@ CONTROLLABLE_BINARY_SENSOR_SCHEMA = BINARY_SENSOR_SCHEMA.extend(
     }
 )
 
-UPDATE_SCHEMA = TEXT_SENSOR_SCHEMA.extend(
+VERSION_SENSOR_SCHEMA = SENSOR_SCHEMA
+
+UPDATE_SCHEMA = VERSION_SENSOR_SCHEMA.extend(
     {
         vol.Required(CONF_LATEST): str,
         vol.Optional(CONF_DEVICE_CLASS): UPDATE_DEVICE_CLASSES_SCHEMA,

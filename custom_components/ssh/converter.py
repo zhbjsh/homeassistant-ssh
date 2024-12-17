@@ -234,15 +234,15 @@ class Converter:
     def _get_version_sensor_config(self, sensor: VersionSensor) -> dict:
         return remove_none_items(
             {
-                **self._get_text_sensor_config(sensor),
                 CONF_TYPE: "version",
+                **self._get_sensor_config(sensor),
                 CONF_LATEST: sensor.latest,
             }
         )
 
     def _get_version_sensor_kwargs(self, data: dict) -> dict:
         return {
-            **self._get_text_sensor_kwargs(data),
+            **self._get_sensor_kwargs(data),
             "latest": data.get(CONF_LATEST),
         }
 

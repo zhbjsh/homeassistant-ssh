@@ -49,17 +49,13 @@ async def async_get_entities(
     latest_keys = {
         sensor.latest
         for sensor in entry_data.manager.sensors_by_key.values()
-        if isinstance(sensor, VersionSensor)
+        if isinstance(sensor, VersionSensor) and sensor.latest
     }
 
-    for sensor in (sensors_by_key := entry_data.manager.sensors_by_key).values():
+    for sensor in entry_data.manager.sensors_by_key.values():
         if (
             isinstance(sensor, BinarySensor)
-            or (
-                isinstance(sensor, VersionSensor)
-                and sensor.latest
-                and sensors_by_key.get(sensor.latest)
-            )
+            or (isinstance(sensor, VersionSensor) and sensor.latest)
             or sensor.controllable
             or sensor.key in latest_keys
         ):

@@ -38,14 +38,9 @@ async def async_get_entities(
     ignored_keys = entry_data.ignored_sensor_keys
     entities = []
 
-    for sensor in (sensors_by_key := entry_data.manager.sensors_by_key).values():
+    for sensor in entry_data.manager.sensors_by_key.values():
         if not (
             isinstance(sensor, TextSensor)
-            and not (
-                isinstance(sensor, VersionSensor)
-                and sensor.latest
-                and sensors_by_key.get(sensor.latest)
-            )
             and sensor.controllable
             and not sensor.options
         ):
