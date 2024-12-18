@@ -71,6 +71,7 @@ from .helpers import (
     get_child_add_handler,
     get_child_remove_handler,
     get_command_renderer,
+    get_device_info,
     get_device_sensor_update_handler,
     get_value_renderer,
 )
@@ -214,12 +215,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     entry_data: EntryData = hass.data[entry.domain][entry.entry_id]
     platforms = entry_data.platforms
-    coordinators = entry_data.state_coordinator, *entry_data.command_coordinators
 
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, platforms):
         hass.data[entry.domain].pop(entry.entry_id)
 
-        for coordinator in coordinators:
+        for coordinator in entry_data.coordinators:
             await coordinator.async_shutdown()
 
         await entry_data.manager.async_close()
@@ -236,13 +236,6 @@ async def async_initialize_entry(
     ignored_sensor_keys: list[SensorKey] | None = None,
 ):
     """Initialize a config entry."""
-    device_registry = dr.async_get(hass)
-    device_entry = device_registry.async_get_or_create(
-        config_entry_id=entry.entry_id,
-        identifiers={(entry.domain, entry.unique_id)},
-        name=manager.name,
-    )
-
     state_coordinator = StateCoordinator(
         hass, manager, entry.options[CONF_UPDATE_INTERVAL]
     )
@@ -255,7 +248,6 @@ async def async_initialize_entry(
 
     entry_data = EntryData(
         entry,
-        device_entry,
         manager,
         state_coordinator,
         command_coordinators,
@@ -263,14 +255,6 @@ async def async_initialize_entry(
         ignored_action_keys,
         ignored_sensor_keys,
     )
-
-    handle_device_sensor_update = get_device_sensor_update_handler(
-        hass, entry_data, device_registry
-    )
-
-    for key in DEVICE_SENSOR_KEYS:
-        if sensor := manager.sensors_by_key.get(key):
-            sensor.on_update.subscribe(handle_device_sensor_update)
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
@@ -281,6 +265,22 @@ async def async_initialize_entry(
 
     if manager.disconnect_mode:
         await manager.async_update_sensor_commands(force=True)
+
+    device_registry = dr.async_get(hass)
+    entry_data.device_entry = device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(entry.domain, entry.unique_id)},
+        name=manager.name,
+        **get_device_info(manager),
+    )
+
+    handle_device_sensor_update = get_device_sensor_update_handler(
+        hass, entry_data, device_registry
+    )
+
+    for key in DEVICE_SENSOR_KEYS:
+        if sensor := manager.sensors_by_key.get(key):
+            sensor.on_update.subscribe(handle_device_sensor_update)
 
     await hass.config_entries.async_forward_entry_setups(entry, platforms)
 

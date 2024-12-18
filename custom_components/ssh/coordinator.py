@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import timedelta
 from time import time
+from typing import TYPE_CHECKING
 
 from ssh_terminal_manager import (
     CommandError,
@@ -13,24 +14,59 @@ from ssh_terminal_manager import (
     SSHManager,
 )
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+
+if TYPE_CHECKING:
+    from .entry_data import EntryData
 
 FAST_UPDATE_INTERVAL = 2
 FAST_UPDATE_MAXIMUM = 60
 
 
-def stop_coordinators(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Stop all coordinators."""
-    entry_data = hass.data[entry.domain][entry.entry_id]
-    coordinators = entry_data.state_coordinator, *entry_data.command_coordinators
-    for coordinator in coordinators:
-        coordinator.stop()
+class BaseCoordinator(DataUpdateCoordinator):
+    _remove_listener: Callable | None = None
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        manager: SSHManager,
+        name: str,
+        update_interval: timedelta,
+    ) -> None:
+        super().__init__(
+            hass,
+            manager.logger,
+            name=name,
+            update_interval=update_interval,
+        )
+        self._manager = manager
+        self.start()
+
+    @property
+    def _coordinators(self) -> list[BaseCoordinator]:
+        entry = self.config_entry
+        entry_data: EntryData = self.hass.data[entry.domain][entry.entry_id]
+        return entry_data.coordinators
+
+    def start(self):
+        """Add listener to keep updating without entities."""
+        if not self._listeners:
+            self._remove_listener = self.async_add_listener(lambda: None)
+
+    def stop(self):
+        """Remove listener to stop updating."""
+        if self._listeners:
+            self._remove_listener()
+
+    def stop_all(self) -> None:
+        """Stop all coordinators."""
+        for coordinator in self._coordinators:
+            coordinator.stop()
 
 
-class StateCoordinator(DataUpdateCoordinator):
+class StateCoordinator(BaseCoordinator):
     _fast_update: tuple[float, Callable[[None], bool]] | None = None
 
     def __init__(
@@ -41,24 +77,17 @@ class StateCoordinator(DataUpdateCoordinator):
     ) -> None:
         super().__init__(
             hass,
-            manager.logger,
-            name=f"{manager.name} state",
-            update_interval=timedelta(seconds=update_interval),
+            manager,
+            f"{manager.name} state",
+            timedelta(seconds=update_interval),
         )
-        self._manager = manager
         self._regular_update_interval = self.update_interval
-        # Add listener to keep updating without any entities
-        self._remove_listener: Callable = self.async_add_listener(lambda: None)
-
-    def stop(self):
-        if self._listeners:
-            self._remove_listener()
 
     async def _async_update_data(self) -> None:
         try:
             await self._manager.async_update_state()
         except (SSHAuthenticationError, SSHHostKeyUnknownError) as exc:
-            stop_coordinators(self.hass, self.config_entry)
+            self.stop_all()
             raise ConfigEntryAuthFailed(exc) from exc
         except Exception as exc:
             raise UpdateFailed(f"Exception updating {self.name}: {exc}") from exc
@@ -102,7 +131,7 @@ class StateCoordinator(DataUpdateCoordinator):
         return await self._manager.async_restart()
 
 
-class SensorCommandCoordinator(DataUpdateCoordinator):
+class SensorCommandCoordinator(BaseCoordinator):
     def __init__(
         self,
         hass: HomeAssistant,
@@ -111,18 +140,11 @@ class SensorCommandCoordinator(DataUpdateCoordinator):
     ) -> None:
         super().__init__(
             hass,
-            manager.logger,
-            name=f"{manager.name} {', '.join(sensor.key for sensor in command.sensors)}",
-            update_interval=timedelta(seconds=command.interval),
+            manager,
+            f"{manager.name} {', '.join(sensor.key for sensor in command.sensors)}",
+            timedelta(seconds=command.interval),
         )
-        self._manager = manager
         self._command = command
-        # Add listener to keep updating without any entities
-        self._remove_listener: Callable = self.async_add_listener(lambda: None)
-
-    def stop(self):
-        if self._listeners:
-            self._remove_listener()
 
     async def _async_update_data(self) -> None:
         if not self._manager.is_up:
@@ -132,10 +154,10 @@ class SensorCommandCoordinator(DataUpdateCoordinator):
         except CommandError as exc:
             cause = exc.__cause__
             if isinstance(cause, (SSHAuthenticationError, SSHHostKeyUnknownError)):
-                stop_coordinators(self.hass, self.config_entry)
+                self.stop_all()
                 raise ConfigEntryAuthFailed(exc) from exc
         except (SSHAuthenticationError, SSHHostKeyUnknownError) as exc:
-            stop_coordinators(self.hass, self.config_entry)
+            self.stop_all()
             raise ConfigEntryAuthFailed(exc) from exc
         except Exception as exc:
             raise UpdateFailed(f"Exception updating {self.name}: {exc}") from exc

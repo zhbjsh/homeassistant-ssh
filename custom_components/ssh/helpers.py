@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from ssh_terminal_manager import Sensor, SensorKey
+from ssh_terminal_manager import Sensor, SensorKey, SSHManager
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceRegistry
@@ -30,13 +30,7 @@ def get_value_renderer(hass: HomeAssistant, value_template: str) -> Callable:
     return async_renderer
 
 
-def get_device_sensor_update_handler(
-    hass: HomeAssistant,
-    entry_data: EntryData,
-    device_registry: DeviceRegistry,
-) -> Callable:
-    device_id = entry_data.device_entry.id
-    manager = entry_data.manager
+def get_device_info(manager: SSHManager) -> dict:
     convert = InformationConverter().convert
 
     def get_hw_version() -> str | None:
@@ -80,14 +74,24 @@ def get_device_sensor_update_handler(
             or manager.cpu_hardware
         )
 
+    return {
+        "hw_version": get_hw_version(),
+        "sw_version": get_sw_version(),
+        "manufacturer": get_manufacturer(),
+        "model": get_model(),
+    }
+
+
+def get_device_sensor_update_handler(
+    hass: HomeAssistant,
+    entry_data: EntryData,
+    device_registry: DeviceRegistry,
+) -> Callable:
     def async_handler(sensor: Sensor):
         if sensor.value is not None:
             device_registry.async_update_device(
-                device_id,
-                hw_version=get_hw_version(),
-                sw_version=get_sw_version(),
-                manufacturer=get_manufacturer(),
-                model=get_model(),
+                entry_data.device_entry.id,
+                **get_device_info(entry_data.manager),
             )
 
     return async_handler
