@@ -192,7 +192,7 @@ def _get_sensor_schema(data: dict) -> vol.Schema:
     raise ValueError("Invalid sensor type")
 
 
-def _validate(data: dict) -> dict:
+def _validate_sensor(data: dict) -> dict:
     return _get_sensor_schema(data)(data)
 
 
@@ -217,7 +217,7 @@ SENSOR_COMMAND_SCHEMA = COMMAND_SCHEMA.extend(
     {
         vol.Optional(CONF_SCAN_INTERVAL): int,
         vol.Optional(CONF_SEPARATOR): str,
-        vol.Required(CONF_SENSORS): vol.Schema([_validate]),
+        vol.Required(CONF_SENSORS): vol.Schema([_validate_sensor]),
     }
 )
 
@@ -341,13 +341,12 @@ class OptionsFlow(config_entries.OptionsFlow):
 
     def reset_commands(
         self,
-        options: dict[str, Any],
         reset_default_commands: bool,
         remove_custom_commands: bool,
-    ) -> dict:
+    ) -> None:
         """Reset the commands."""
         if not reset_default_commands and not remove_custom_commands:
-            return options
+            return
 
         if self._default_collection:
             collection = Collection(
@@ -361,8 +360,8 @@ class OptionsFlow(config_entries.OptionsFlow):
         default_action_commands_by_key = collection.action_commands_by_key
         default_sensors_by_key = collection.sensors_by_key
         converter = Converter(self.hass)
-        old_default_collection = converter.get_collection(options)
-        old_custom_collection = converter.get_collection(options)
+        old_default_collection = converter.get_collection(self._data)
+        old_custom_collection = converter.get_collection(self._data)
 
         for key in old_default_collection.action_commands_by_key:
             if key not in default_action_commands_by_key:
@@ -390,8 +389,8 @@ class OptionsFlow(config_entries.OptionsFlow):
             for command in old_custom_collection.sensor_commands:
                 collection.add_sensor_command(command)
 
-        return {
-            **options,
+        self._data = {
+            **self._data,
             CONF_ACTION_COMMANDS: [
                 converter.get_action_command_config(command)
                 for command in collection.action_commands
@@ -409,9 +408,10 @@ class OptionsFlow(config_entries.OptionsFlow):
         errors: dict[str, str] = {}
         placeholders: dict[str, str] = {}
         if user_input is not None:
+            reset_commands = user_input.pop(CONF_RESET_COMMANDS)
             self._data = user_input
             try:
-                options = self.validate_init(user_input)
+                self._data = self.validate_init(user_input)
             except NameKeyError:
                 errors["base"] = "name_key_error"
             except CommandLoopError as exc:
@@ -425,9 +425,9 @@ class OptionsFlow(config_entries.OptionsFlow):
                 self.logger.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
-                if options[CONF_RESET_COMMANDS]:
+                if reset_commands:
                     return await self.async_step_reset_commands()
-                return self.async_create_entry(title="", data=options)
+                return self.async_create_entry(title="", data=self._data)
 
         return self.async_show_form(
             step_id="init",
@@ -472,14 +472,11 @@ class OptionsFlow(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Handle the reset commands step."""
         if user_input is not None:
-            return self.async_create_entry(
-                title="",
-                data=self.reset_commands(
-                    self._data,
-                    user_input[CONF_RESET_DEFAULT_COMMANDS],
-                    user_input[CONF_REMOVE_CUSTOM_COMMANDS],
-                ),
+            self.reset_commands(
+                user_input[CONF_RESET_DEFAULT_COMMANDS],
+                user_input[CONF_REMOVE_CUSTOM_COMMANDS],
             )
+            return self.async_create_entry(title="", data=self._data)
 
         return self.async_show_form(
             step_id="reset_commands",
