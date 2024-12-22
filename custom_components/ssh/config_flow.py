@@ -118,7 +118,7 @@ from .converter import Converter
 _LOGGER = logging.getLogger(__name__)
 
 
-def _order_action_command(data: dict) -> dict:
+def _sort_action_command(data: dict) -> dict:
     return {
         key: data[key]
         for key in [str(key) for key in ACTION_COMMAND_SCHEMA.schema]
@@ -126,35 +126,23 @@ def _order_action_command(data: dict) -> dict:
     }
 
 
-def _order_sensor_command(data: dict) -> dict:
+def _sort_sensor_command(data: dict) -> dict:
     return {
         key: (
             data[key]
             if key != CONF_SENSORS
-            else [_order_sensor(sensor) for sensor in data[key]]
+            else [_sort_sensor(sensor) for sensor in data[key]]
         )
         for key in [str(key) for key in SENSOR_COMMAND_SCHEMA.schema]
         if key in data
     }
 
 
-def _order_sensor(data: dict) -> dict:
+def _sort_sensor(data: dict) -> dict:
     return {
         key: data[key]
         for key in [str(key) for key in _get_sensor_schema(data).schema]
         if key in data
-    }
-
-
-def _order_options(data: dict) -> dict:
-    return {
-        **data,
-        CONF_ACTION_COMMANDS: [
-            _order_action_command(command) for command in data[CONF_ACTION_COMMANDS]
-        ],
-        CONF_SENSOR_COMMANDS: [
-            _order_sensor_command(command) for command in data[CONF_SENSOR_COMMANDS]
-        ],
     }
 
 
@@ -372,7 +360,8 @@ class OptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: ConfigEntry) -> None:
         super().__init__()
-        self._data = _order_options(config_entry.options)
+        self._data = {**config_entry.options}
+        self.sort_commands()
 
     @property
     def _default_collection(self) -> Collection | None:
@@ -384,6 +373,20 @@ class OptionsFlow(config_entries.OptionsFlow):
         """Validate the options user input."""
         Converter(self.hass).get_collection(options)
         return options
+
+    def sort_commands(self) -> None:
+        """Sort the commands."""
+        self._data = {
+            **self._data,
+            CONF_ACTION_COMMANDS: [
+                _sort_action_command(command)
+                for command in self._data[CONF_ACTION_COMMANDS]
+            ],
+            CONF_SENSOR_COMMANDS: [
+                _sort_sensor_command(command)
+                for command in self._data[CONF_SENSOR_COMMANDS]
+            ],
+        }
 
     def reset_commands(
         self, reset_default_commands: bool, remove_custom_commands: bool
@@ -772,7 +775,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._existing_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
         )
-        self._data = self._existing_entry.data.copy()
+        self._data = {**self._existing_entry.data}
         return await self.async_step_user()
 
     async def async_step_reauth(self, user_input: Mapping[str, Any]) -> FlowResult:
