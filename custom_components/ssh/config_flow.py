@@ -196,6 +196,31 @@ def _validate_sensor(data: dict) -> dict:
     return _get_sensor_schema(data)(data)
 
 
+class ListSelector(ObjectSelector):
+    def __init__(
+        self, schema: vol.Schema, config: Mapping[str, Any] | None = None
+    ) -> None:
+        super().__init__(config)
+        self._schema = schema
+
+    def __call__(self, data: Any) -> Any:
+        return [self._schema(element) for element in data]
+
+
+DEFAULT_COMMANDS_SELECTOR = SelectSelector(
+    SelectSelectorConfig(
+        mode=SelectSelectorMode.DROPDOWN,
+        options=[
+            *[
+                SelectOptionDict(value=key, label=value.name)
+                for key, value in default_collections.__dict__.items()
+                if isinstance(value, Collection)
+            ],
+            SelectOptionDict(value="none", label="None"),
+        ],
+    )
+)
+
 COMMAND_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_COMMAND): str,
@@ -293,30 +318,51 @@ UPDATE_SCHEMA = VERSION_SENSOR_SCHEMA.extend(
     }
 )
 
-DEFAULT_COMMANDS_SELECTOR = SelectSelector(
-    SelectSelectorConfig(
-        mode=SelectSelectorMode.DROPDOWN,
-        options=[
-            *[
-                SelectOptionDict(value=key, label=value.name)
-                for key, value in default_collections.__dict__.items()
-                if isinstance(value, Collection)
-            ],
-            SelectOptionDict(value="none", label="None"),
-        ],
-    )
+CONFIG_FLOW_USER_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_HOST): str,
+        vol.Required(CONF_PORT): int,
+        vol.Optional(CONF_USERNAME): str,
+        vol.Optional(CONF_PASSWORD): str,
+        vol.Required(CONF_DEFAULT_COMMANDS): DEFAULT_COMMANDS_SELECTOR,
+        vol.Optional(CONF_KEY_FILENAME): str,
+        vol.Optional(CONF_HOST_KEYS_FILENAME): str,
+        vol.Required(CONF_ADD_HOST_KEYS): BooleanSelector(),
+        vol.Required(CONF_LOAD_SYSTEM_HOST_KEYS): BooleanSelector(),
+        vol.Required(CONF_INVOKE_SHELL): BooleanSelector(),
+    }
 )
 
+CONFIG_FLOW_MAC_ADDRESS_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_MAC): str,
+    }
+)
 
-class ListSelector(ObjectSelector):
-    def __init__(
-        self, schema: vol.Schema, config: Mapping[str, Any] | None = None
-    ) -> None:
-        super().__init__(config)
-        self._schema = schema
+CONFIG_FLOW_NAME_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_NAME): str,
+    }
+)
 
-    def __call__(self, data: Any) -> Any:
-        return [self._schema(element) for element in data]
+OPTIONS_FLOW_INIT_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_ALLOW_TURN_OFF): BooleanSelector(),
+        vol.Required(CONF_DISCONNECT_MODE): BooleanSelector(),
+        vol.Required(CONF_UPDATE_INTERVAL): int,
+        vol.Required(CONF_COMMAND_TIMEOUT): int,
+        vol.Required(CONF_ACTION_COMMANDS): ListSelector(ACTION_COMMAND_SCHEMA),
+        vol.Required(CONF_SENSOR_COMMANDS): ListSelector(SENSOR_COMMAND_SCHEMA),
+        vol.Required(CONF_RESET_COMMANDS): BooleanSelector(),
+    }
+)
+
+OPTIONS_FLOW_RESET_COMMANDS_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_RESET_DEFAULT_COMMANDS): BooleanSelector(),
+        vol.Required(CONF_REMOVE_CUSTOM_COMMANDS): BooleanSelector(),
+    }
+)
 
 
 class OptionsFlow(config_entries.OptionsFlow):
@@ -334,15 +380,13 @@ class OptionsFlow(config_entries.OptionsFlow):
             return getattr(default_collections, key)
         return None
 
-    def validate_init(self, options: dict[str, Any]) -> dict[str, Any]:
+    def validate_init(self, options: dict) -> dict[str, Any]:
         """Validate the options user input."""
         Converter(self.hass).get_collection(options)
         return options
 
     def reset_commands(
-        self,
-        reset_default_commands: bool,
-        remove_custom_commands: bool,
+        self, reset_default_commands: bool, remove_custom_commands: bool
     ) -> None:
         """Reset the commands."""
         if not reset_default_commands and not remove_custom_commands:
@@ -433,37 +477,12 @@ class OptionsFlow(config_entries.OptionsFlow):
             step_id="init",
             errors=errors,
             description_placeholders=placeholders,
-            data_schema=vol.Schema(
+            data_schema=self.add_suggested_values_to_schema(
+                OPTIONS_FLOW_INIT_SCHEMA,
                 {
-                    vol.Required(
-                        CONF_ALLOW_TURN_OFF,
-                        default=self._data[CONF_ALLOW_TURN_OFF],
-                    ): BooleanSelector(),
-                    vol.Required(
-                        CONF_DISCONNECT_MODE,
-                        default=self._data[CONF_DISCONNECT_MODE],
-                    ): BooleanSelector(),
-                    vol.Required(
-                        CONF_UPDATE_INTERVAL,
-                        default=self._data[CONF_UPDATE_INTERVAL],
-                    ): int,
-                    vol.Required(
-                        CONF_COMMAND_TIMEOUT,
-                        default=self._data[CONF_COMMAND_TIMEOUT],
-                    ): int,
-                    vol.Required(
-                        CONF_ACTION_COMMANDS,
-                        default=self._data[CONF_ACTION_COMMANDS],
-                    ): ListSelector(ACTION_COMMAND_SCHEMA),
-                    vol.Required(
-                        CONF_SENSOR_COMMANDS,
-                        default=self._data[CONF_SENSOR_COMMANDS],
-                    ): ListSelector(SENSOR_COMMAND_SCHEMA),
-                    vol.Required(
-                        CONF_RESET_COMMANDS,
-                        default=False,
-                    ): BooleanSelector(),
-                }
+                    **self._data,
+                    CONF_RESET_COMMANDS: False,
+                },
             ),
         )
 
@@ -480,17 +499,12 @@ class OptionsFlow(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="reset_commands",
-            data_schema=vol.Schema(
+            data_schema=self.add_suggested_values_to_schema(
+                OPTIONS_FLOW_RESET_COMMANDS_SCHEMA,
                 {
-                    vol.Required(
-                        CONF_RESET_DEFAULT_COMMANDS,
-                        default=True,
-                    ): BooleanSelector(),
-                    vol.Required(
-                        CONF_REMOVE_CUSTOM_COMMANDS,
-                        default=False,
-                    ): BooleanSelector(),
-                }
+                    CONF_RESET_DEFAULT_COMMANDS: True,
+                    CONF_REMOVE_CUSTOM_COMMANDS: False,
+                },
             ),
         )
 
@@ -515,6 +529,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return OptionsFlow(config_entry)
 
     def __init__(self) -> None:
+        super().__init__()
         self._data = {}
         self._options = {}
 
@@ -526,6 +541,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return self.validate_mac_address(mac_address)
             except MACAddressInvalidError as exc:
                 self.logger.debug(exc)
+
         return None
 
     async def async_get_hostname(self, manager: SSHManager) -> str | None:
@@ -536,12 +552,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_validate_name(hostname)
             except NameExistsError as exc:
                 self.logger.debug(exc)
+
         return None
 
-    def get_options(self, manager: SSHManager) -> dict[str, Any]:
+    def get_options(self, manager: SSHManager) -> dict:
         """Get options from manager."""
         converter = Converter(self.hass)
-
         return {
             CONF_ALLOW_TURN_OFF: manager.allow_turn_off,
             CONF_DISCONNECT_MODE: manager.disconnect_mode,
@@ -557,9 +573,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ],
         }
 
-    async def async_validate_user(
-        self, data: dict[str, Any]
-    ) -> tuple[dict[str, Any], dict[str, Any]]:
+    async def async_validate_user(self, data: dict) -> tuple[dict, dict]:
         """Validate the config user input."""
         manager = SSHManager(
             data[CONF_HOST],
@@ -584,9 +598,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         async with manager:
             await manager.async_update_state(raise_errors=True)
 
-        data[CONF_MAC] = self.get_mac_address(manager)
-        data[CONF_NAME] = await self.async_get_hostname(manager)
-
+        data = {
+            **data,
+            CONF_MAC: self.get_mac_address(manager),
+            CONF_NAME: await self.async_get_hostname(manager),
+        }
         options = self.get_options(manager)
 
         return data, options
@@ -594,13 +610,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def validate_mac_address(self, mac_address: str) -> str:
         """Validate the mac address has the correct format."""
         mac_address = mac_address.strip().lower()
-
         pattern = (
-            "^([0-9A-Fa-f]{2}[:-])"  # noqa: ISC003
-            + "{5}([0-9A-Fa-f]{2})|"
-            + "([0-9a-fA-F]{4}\\."
-            + "[0-9a-fA-F]{4}\\."
-            + "[0-9a-fA-F]{4})$"
+            "^([0-9A-Fa-f]{2}[:-])"
+            "{5}([0-9A-Fa-f]{2})|"
+            "([0-9a-fA-F]{4}\\."
+            "[0-9a-fA-F]{4}\\."
+            "[0-9a-fA-F]{4})$"
         )
 
         if not re.fullmatch(pattern, mac_address):
@@ -671,56 +686,25 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             errors=errors,
             description_placeholders=placeholders,
-            data_schema=vol.Schema(
+            data_schema=self.add_suggested_values_to_schema(
+                CONFIG_FLOW_USER_SCHEMA,
                 {
-                    vol.Required(
-                        CONF_HOST,
-                        default=self._data.get(CONF_HOST, vol.UNDEFINED),
-                    ): str,
-                    vol.Required(
-                        CONF_PORT,
-                        default=self._data.get(CONF_PORT, DEFAULT_PORT),
-                    ): int,
-                    vol.Optional(
-                        CONF_USERNAME,
-                        default=self._data.get(CONF_USERNAME, vol.UNDEFINED),
-                    ): str,
-                    vol.Optional(
-                        CONF_PASSWORD,
-                        default=self._data.get(CONF_PASSWORD, vol.UNDEFINED),
-                    ): str,
-                    vol.Required(
-                        CONF_DEFAULT_COMMANDS,
-                        default=self._data.get(CONF_DEFAULT_COMMANDS, vol.UNDEFINED),
-                    ): DEFAULT_COMMANDS_SELECTOR,
-                    vol.Optional(
-                        CONF_KEY_FILENAME,
-                        default=self._data.get(CONF_KEY_FILENAME, vol.UNDEFINED),
-                    ): str,
-                    vol.Optional(
+                    **self._data,
+                    CONF_PORT: self._data.get(CONF_PORT, DEFAULT_PORT),
+                    CONF_HOST_KEYS_FILENAME: self._data.get(
                         CONF_HOST_KEYS_FILENAME,
-                        default=self._data.get(
-                            CONF_HOST_KEYS_FILENAME,
-                            f"{self.hass.config.config_dir}/{DEFAULT_HOST_KEYS_FILENAME}",
-                        ),
-                    ): str,
-                    vol.Required(
-                        CONF_ADD_HOST_KEYS,
-                        default=self._data.get(
-                            CONF_ADD_HOST_KEYS, DEFAULT_ADD_HOST_KEYS
-                        ),
-                    ): BooleanSelector(),
-                    vol.Required(
-                        CONF_LOAD_SYSTEM_HOST_KEYS,
-                        default=self._data.get(
-                            CONF_LOAD_SYSTEM_HOST_KEYS, DEFAULT_LOAD_SYSTEM_HOST_KEYS
-                        ),
-                    ): BooleanSelector(),
-                    vol.Required(
-                        CONF_INVOKE_SHELL,
-                        default=self._data.get(CONF_INVOKE_SHELL, DEFAULT_INVOKE_SHELL),
-                    ): BooleanSelector(),
-                }
+                        f"{self.hass.config.config_dir}/{DEFAULT_HOST_KEYS_FILENAME}",
+                    ),
+                    CONF_ADD_HOST_KEYS: self._data.get(
+                        CONF_ADD_HOST_KEYS, DEFAULT_ADD_HOST_KEYS
+                    ),
+                    CONF_LOAD_SYSTEM_HOST_KEYS: self._data.get(
+                        CONF_LOAD_SYSTEM_HOST_KEYS, DEFAULT_LOAD_SYSTEM_HOST_KEYS
+                    ),
+                    CONF_INVOKE_SHELL: self._data.get(
+                        CONF_INVOKE_SHELL, DEFAULT_INVOKE_SHELL
+                    ),
+                },
             ),
         )
 
@@ -730,9 +714,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the mac_address step."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            self._data[CONF_MAC] = user_input[CONF_MAC]
+            self._data[CONF_MAC] = (mac_address := user_input[CONF_MAC])
             try:
-                self._data[CONF_MAC] = self.validate_mac_address(user_input[CONF_MAC])
+                self._data[CONF_MAC] = self.validate_mac_address(mac_address)
             except MACAddressInvalidError:
                 errors["base"] = "mac_address_invalid_error"
             except Exception:
@@ -747,12 +731,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="mac_address",
             errors=errors,
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_MAC, default=self._data.get(CONF_MAC, vol.UNDEFINED)
-                    ): str
-                }
+            data_schema=self.add_suggested_values_to_schema(
+                CONFIG_FLOW_MAC_ADDRESS_SCHEMA,
+                self._data,
             ),
         )
 
@@ -762,11 +743,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the name step."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            self._data[CONF_NAME] = user_input[CONF_NAME]
+            self._data[CONF_NAME] = (name := user_input[CONF_NAME])
             try:
-                self._data[CONF_NAME] = await self.async_validate_name(
-                    user_input[CONF_NAME]
-                )
+                self._data[CONF_NAME] = await self.async_validate_name(name)
             except NameExistsError:
                 errors["base"] = "name_exists_error"
             except Exception:
@@ -774,18 +753,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "unknown"
             else:
                 return self.async_create_entry(
-                    title=self._data[CONF_NAME], data=self._data, options=self._options
+                    title=self._data[CONF_NAME],
+                    data=self._data,
+                    options=self._options,
                 )
 
         return self.async_show_form(
             step_id="name",
             errors=errors,
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_NAME, default=self._data.get(CONF_NAME, vol.UNDEFINED)
-                    ): str
-                }
+            data_schema=self.add_suggested_values_to_schema(
+                CONFIG_FLOW_NAME_SCHEMA,
+                self._data,
             ),
         )
 
@@ -805,7 +783,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Dialog that informs the user that reauth is required."""
         if user_input is None:
             return self.async_show_form(
-                step_id="reauth_confirm", data_schema=vol.Schema({})
+                step_id="reauth_confirm",
+                data_schema=vol.Schema({}),
             )
         return await self.async_step_reconfigure()
 
