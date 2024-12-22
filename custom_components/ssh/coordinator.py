@@ -142,7 +142,7 @@ class SensorCommandCoordinator(BaseCoordinator):
             hass,
             manager,
             f"{manager.name} {', '.join(sensor.key for sensor in command.sensors)}",
-            timedelta(seconds=command.interval),
+            timedelta(seconds=command.interval) if command.interval else None,
         )
         self._command = command
 

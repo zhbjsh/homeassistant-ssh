@@ -243,7 +243,6 @@ async def async_initialize_entry(
     command_coordinators = [
         SensorCommandCoordinator(hass, manager, command)
         for command in manager.sensor_commands
-        if command.interval
     ]
 
     entry_data = EntryData(
@@ -264,7 +263,8 @@ async def async_initialize_entry(
     await state_coordinator.async_config_entry_first_refresh()
 
     if manager.disconnect_mode:
-        await manager.async_update_sensor_commands(force=True)
+        for coordinator in command_coordinators:
+            await coordinator.async_config_entry_first_refresh()
 
     device_registry = dr.async_get(hass)
     entry_data.device_entry = device_registry.async_get_or_create(
