@@ -12,7 +12,7 @@ from homeassistant.components.update import (
     UpdateEntityFeature,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, HomeAssistantError
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -88,9 +88,9 @@ class Entity(BaseSensorEntity, UpdateEntity):
 
     async def async_install(
         self, version: str | None, backup: bool, **kwargs: Any
-    ) -> entity_platform.Coroutine[Any, Any, None]:
+    ) -> None:
         value = version or self.latest_version
-        await self._manager.async_set_sensor_value(self.key, value)
+        await self.coordinator.async_set_sensor_value(self.key, value)
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()

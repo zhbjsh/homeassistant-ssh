@@ -83,4 +83,4 @@ class Entity(BaseSensorEntity, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         if not self._sensor.float:
             value = int(value)
-        await self._manager.async_set_sensor_value(self.key, value)
+        await self.coordinator.async_set_sensor_value(self.key, value)

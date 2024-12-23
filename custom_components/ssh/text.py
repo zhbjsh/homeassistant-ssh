@@ -85,4 +85,4 @@ class Entity(BaseSensorEntity, TextEntity):
         return self._attributes.get(CONF_MODE, TextMode.TEXT)
 
     async def async_set_value(self, value: str) -> None:
-        await self._manager.async_set_sensor_value(self.key, value)
+        await self.coordinator.async_set_sensor_value(self.key, value)

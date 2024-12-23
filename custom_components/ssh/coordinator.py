@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import timedelta
 from time import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ssh_terminal_manager import (
     CommandError,
@@ -14,7 +14,7 @@ from ssh_terminal_manager import (
     SSHManager,
 )
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, HomeAssistantError, ServiceValidationError
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -129,6 +129,15 @@ class StateCoordinator(BaseCoordinator):
         """
         await self._async_start_fast_update(lambda: self._manager.is_down)
         return await self._manager.async_restart()
+
+    async def async_set_sensor_value(self, key: str, value: Any) -> None:
+        """Set sensor value."""
+        try:
+            await self._manager.async_set_sensor_value(key, value, raise_errors=True)
+        except (TypeError, ValueError) as exc:
+            raise ServiceValidationError(exc) from exc
+        except CommandError as exc:
+            raise HomeAssistantError(exc) from exc
 
 
 class SensorCommandCoordinator(BaseCoordinator):

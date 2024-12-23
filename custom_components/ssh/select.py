@@ -66,4 +66,4 @@ class Entity(BaseSensorEntity, SelectEntity):
         return self._sensor.value
 
     async def async_select_option(self, option: str) -> None:
-        await self._manager.async_set_sensor_value(self.key, option)
+        await self.coordinator.async_set_sensor_value(self.key, option)
