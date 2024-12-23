@@ -2,13 +2,13 @@
 
 # SSH Integration for Home Assistant
 
-This custom integration allows you to control and monitor devices in Home Assistant by executing terminal commands via SSH. It uses the [paramiko](https://www.paramiko.org) library and works in a similar way as the official [Command Line](https://www.home-assistant.io/integrations/command_line/#usage-of-templating-in-command) integration.
+This custom integration allows you to control and monitor devices in Home Assistant by executing terminal commands via SSH. It uses the [paramiko](https://www.paramiko.org) library and works in a similar way as the official [Command Line](https://www.home-assistant.io/integrations/command_line) integration.
 
 ### Features
 
 - SSH authentication with username/password or key file.
 - Connect to multiple devices at the same time.
-- Generate sensor, binary sensor, text, select, number and switch entities.
+- Generate sensor, binary sensor, text, select, number, switch and update entities.
 - Default commands for Linux and Windows included and available without configuration.
 - Edit all commands and settings from the UI.
 - Get the value of multiple sensors from the output of a single command.
@@ -22,7 +22,7 @@ This custom integration allows you to control and monitor devices in Home Assist
 
 ##### From HACS
 
-Install [HACS](https://hacs.xyz/docs/setup/download) and open it in Home Assistant. Select _Integrations_ and add a custom repository by clicking on the three dots on the top right corner. Enter `https://github.com/zhbjsh/homeassistant-ssh` as _Repository_ and select _Integration_ as _Category_. You can now search for the _SSH_ integration and download it.
+Install [HACS](https://hacs.xyz/docs/use/download/download) and open it in Home Assistant. Select _Integrations_ and add a custom repository by clicking on the three dots on the top right corner. Enter `https://github.com/zhbjsh/homeassistant-ssh` as _Repository_ and select _Integration_ as _Category_. You can now search for the _SSH_ integration and download it.
 
 ##### From Github
 
@@ -108,10 +108,10 @@ Variables can be passed to action commands (but not sensor commands) and accesse
 
 ##### Configuration
 
-| Name      | Description                 | Type    | Required | Default                       |
-| --------- | --------------------------- | ------- | -------- | ----------------------------- |
-| `command` | The command to execute.     | string  | yes      |                               |
-| `timeout` | The timeout of the command. | integer | no       | Command timeout of the device |
+| Name      | Description                            | Type    | Required | Default                       |
+| --------- | -------------------------------------- | ------- | -------- | ----------------------------- |
+| `command` | The command to execute.                | string  | yes      |                               |
+| `timeout` | The timeout of the command in seconds. | integer | no       | Command timeout of the device |
 
 ### Action commands
 
@@ -119,13 +119,13 @@ Action commands are executed manually by pressing a button or calling the [`ssh.
 
 ##### Configuration
 
-| Name                              | Description                                                                                                           | Type    | Required               | Default          |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------- | ---------------- |
-| `name`                            | The name of the entity.                                                                                               | string  | If no `key` specified  |                  |
-| `key`                             | The action key (can be used with [`ssh.run_action`](#run-action-sshrun_action)).                                      | string  | If no `name` specified | Slugified `name` |
-| `device_class`                    | The [device class](https://www.home-assistant.io/docs/configuration/customizing-devices/#device-class) of the entity. | string  | no                     |
-| `icon`                            | The icon of the entity.                                                                                               | string  | no                     |                  |
-| `entity_registry_enabled_default` | Set `false` to disable the entity by default.                                                                         | boolean | no                     | `true`           |
+| Name                              | Description                                                                                               | Type    | Required               | Default          |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------- | ------- | ---------------------- | ---------------- |
+| `name`                            | The name of the entity.                                                                                   | string  | If no `key` specified  |                  |
+| `key`                             | The action key (can be used with [`ssh.run_action`](#run-action-sshrun_action)).                          | string  | If no `name` specified | Slugified `name` |
+| `device_class`                    | The [device class](https://www.home-assistant.io/integrations/homeassistant/#device-class) of the entity. | string  | no                     |                  |
+| `icon`                            | The icon of the entity.                                                                                   | string  | no                     |                  |
+| `entity_registry_enabled_default` | Set `false` to disable the entity by default.                                                             | boolean | no                     | `true`           |
 
 ### Sensor commands
 
@@ -163,20 +163,21 @@ Both static and dynamic sensors can be made controllable by adding a `command_se
 
 ##### Configuration
 
-| Name                              | Description                                                                                                                      | Type    | Required               | Default          |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------- | ---------------- |
-| `type`                            | The sensor type (`text`, `number` or `binary`).                                                                                  | string  | yes                    |                  |
-| `name`                            | The name of the entity.                                                                                                          | string  | If no `key` specified  |                  |
-| `key`                             | The sensor key (can be used in commands).                                                                                        | string  | If no `name` specified | Slugified `name` |
-| `dynamic`                         | Set `true` to create a dynamic sensor.                                                                                           | boolean | no                     | `false`          |
-| `unit_of_measurement`             | The unit of the sensor value.                                                                                                    | string  | no                     |                  |
-| `value_template`                  | [Template](https://www.home-assistant.io/docs/configuration/templating) to render the sensor value ([example](#uptime-in-days)). | string  | no                     |                  |
-| `command_set`                     | Command to set the sensor value (creates a controllable sensor).                                                                 | string  | no                     |                  |
-| `device_class`                    | The [device class](https://www.home-assistant.io/docs/configuration/customizing-devices/#device-class) of the entity.            | string  | no                     |                  |
-| `icon`                            | The icon of the entity.                                                                                                          | string  | no                     |                  |
-| `entity_registry_enabled_default` | Set `false` to disable the entity by default.                                                                                    | boolean | no                     | `true`           |
-| `suggested_unit_of_measurement`   | The suggested unit of the entity.                                                                                                | string  | no                     |                  |
-| `suggested_display_precision`     | The suggested display precision of the entity.                                                                                   | integer | no                     |                  |
+| Name                              | Description                                                                                                                      | Type    | Required               | Default                       |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------- | ----------------------------- |
+| `type`                            | The sensor type (`text`, `number`, `binary` or `version`).                                                                       | string  | yes                    |                               |
+| `name`                            | The name of the entity.                                                                                                          | string  | If no `key` specified  |                               |
+| `key`                             | The sensor key (can be used in commands).                                                                                        | string  | If no `name` specified | Slugified `name`              |
+| `dynamic`                         | Set `true` to create a dynamic sensor.                                                                                           | boolean | no                     | `false`                       |
+| `unit_of_measurement`             | The unit of the sensor value.                                                                                                    | string  | no                     |                               |
+| `value_template`                  | [Template](https://www.home-assistant.io/docs/configuration/templating) to render the sensor value ([example](#uptime-in-days)). | string  | no                     |                               |
+| `command_set`                     | Command to set the sensor value (creates a controllable sensor).                                                                 | string  | no                     |                               |
+| `timeout_set`                     | The timeout of `command_set` in seconds.                                                                                         | integer | no                     | Command timeout of the device |
+| `device_class`                    | The [device class](https://www.home-assistant.io/integrations/homeassistant/#device-class) of the entity.                        | string  | no                     |                               |
+| `icon`                            | The icon of the entity.                                                                                                          | string  | no                     |                               |
+| `entity_registry_enabled_default` | Set `false` to disable the entity by default.                                                                                    | boolean | no                     | `true`                        |
+| `suggested_unit_of_measurement`   | The suggested unit of the entity.                                                                                                | string  | no                     |                               |
+| `suggested_display_precision`     | The suggested display precision of the entity.                                                                                   | integer | no                     |                               |
 
 #### Text type
 
@@ -211,12 +212,14 @@ Sensors with `type: binary` appear as [binary sensor](https://www.home-assistant
 
 ##### Configuration
 
-| Name          | Description                                                                         | Type   | Required | Default |
-| ------------- | ----------------------------------------------------------------------------------- | ------ | -------- | ------- |
-| `command_on`  | Command to set the sensor value to `true` (will be used instead of `command_set`).  | string | no       |         |
-| `command_off` | Command to set the sensor value to `false` (will be used instead of `command_set`). | string | no       |         |
-| `payload_on`  | String to detect a `true` sensor value.                                             | string | no       |         |
-| `payload_off` | String to detect a `false` sensor value.                                            | string | no       |         |
+| Name          | Description                                                                         | Type    | Required | Default                       |
+| ------------- | ----------------------------------------------------------------------------------- | ------- | -------- | ----------------------------- |
+| `command_on`  | Command to set the sensor value to `true` (will be used instead of `command_set`).  | string  | no       |                               |
+| `command_off` | Command to set the sensor value to `false` (will be used instead of `command_set`). | string  | no       |                               |
+| `timeout_on`  | The timeout of `command_on` in seconds.                                             | integer | no       | Command timeout of the device |
+| `timeout_off` | The timeout of `command_off` in seconds.                                            | integer | no       | Command timeout of the device |
+| `payload_on`  | String to detect a `true` sensor value.                                             | string  | no       |                               |
+| `payload_off` | String to detect a `false` sensor value.                                            | string  | no       |                               |
 
 #### Version type
 
@@ -226,7 +229,7 @@ Sensors with `type: version` appear as [sensor](https://www.home-assistant.io/in
 
 | Name     | Description                                                                                                                                                | Type   | Required | Default |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------- | ------- |
-| `latest` | Key of another version sensor to get the latest version (creates an [update](https://www.home-assistant.io/integrations/update) entity). | string | no       |         |
+| `latest` | Key of another version sensor to get the latest version (creates an [update](https://www.home-assistant.io/integrations/update) entity).                   | string | no       |         |
 
 
 ### Examples
@@ -380,6 +383,7 @@ Version sensors can be used to create update entities. Two separate sensors are 
     - type: version
       name: Apache
       command_set: apt-get install apache2=@{value} -y
+      timeout_set: 60
       latest: apache_latest
     - type: version
       name: Apache latest
@@ -482,11 +486,11 @@ Execute a command on the selected devices.
 
 ##### Data
 
-| Name        | Description                       | Type    | Required | Default                       |
-| ----------- | --------------------------------- | ------- | -------- | ----------------------------- |
-| `command`   | The command to execute.           | string  | yes      |                               |
-| `timeout`   | The timeout of the command.       | integer | no       | Command timeout of the device |
-| `variables` | Variables to pass to the command. | map     | no       |                               |
+| Name        | Description                        | Type    | Required | Default                       |
+| ----------- | ---------------------------------- | ------- | -------- | ----------------------------- |
+| `command`   | The command to execute.            | string  | yes      |                               |
+| `timeout`   | Timeout of the command in seconds. | integer | no       | Command timeout of the device |
+| `variables` | Variables to pass to the command.  | map     | no       |                               |
 
 #### Run action (`ssh.run_action`)
 
