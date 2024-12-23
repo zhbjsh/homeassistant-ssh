@@ -52,6 +52,9 @@ from .const import (
     CONF_SEPARATOR,
     CONF_SUGGESTED_DISPLAY_PRECISION,
     CONF_SUGGESTED_UNIT_OF_MEASUREMENT,
+    CONF_TIMEOUT_OFF,
+    CONF_TIMEOUT_ON,
+    CONF_TIMEOUT_SET,
 )
 from .helpers import get_command_renderer, get_value_renderer
 
@@ -141,6 +144,9 @@ class Converter:
                 CONF_COMMAND_SET: sensor.command_set.string
                 if sensor.command_set
                 else None,
+                CONF_TIMEOUT_SET: sensor.command_set.timeout
+                if sensor.command_set
+                else None,
             }
         )
 
@@ -153,7 +159,11 @@ class Converter:
             "renderer": get_value_renderer(self._hass, value_template)
             if (value_template := data.get(CONF_VALUE_TEMPLATE))
             else None,
-            "command_set": Command(string, renderer=get_command_renderer(self._hass))
+            "command_set": Command(
+                string,
+                timeout=data.get(CONF_TIMEOUT_SET),
+                renderer=get_command_renderer(self._hass),
+            )
             if (string := data.get(CONF_COMMAND_SET))
             else None,
             "attributes": {
@@ -213,6 +223,12 @@ class Converter:
                 CONF_COMMAND_OFF: sensor.command_off.string
                 if sensor.command_off
                 else None,
+                CONF_TIMEOUT_ON: sensor.command_on.timeout
+                if sensor.command_on
+                else None,
+                CONF_TIMEOUT_OFF: sensor.command_off.timeout
+                if sensor.command_off
+                else None,
                 CONF_PAYLOAD_ON: sensor.payload_on,
                 CONF_PAYLOAD_OFF: sensor.payload_off,
             }
@@ -221,10 +237,18 @@ class Converter:
     def _get_binary_sensor_kwargs(self, data: dict) -> dict:
         return {
             **self._get_sensor_kwargs(data),
-            "command_on": Command(string, renderer=get_command_renderer(self._hass))
+            "command_on": Command(
+                string,
+                timeout=data.get(CONF_TIMEOUT_ON),
+                renderer=get_command_renderer(self._hass),
+            )
             if (string := data.get(CONF_COMMAND_ON))
             else None,
-            "command_off": Command(string, renderer=get_command_renderer(self._hass))
+            "command_off": Command(
+                string,
+                timeout=data.get(CONF_TIMEOUT_OFF),
+                renderer=get_command_renderer(self._hass),
+            )
             if (string := data.get(CONF_COMMAND_OFF))
             else None,
             "payload_on": data.get(CONF_PAYLOAD_ON),
