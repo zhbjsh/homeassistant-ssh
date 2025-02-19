@@ -79,6 +79,10 @@ class NetworkEntity(BaseEntity, BinarySensorEntity):
         return BinarySensorDeviceClass.CONNECTIVITY
 
     @property
+    def available(self) -> bool:
+        return True
+
+    @property
     def is_on(self) -> bool:
         return self._manager.state.online
 
@@ -90,6 +94,10 @@ class SSHEntity(BaseEntity, BinarySensorEntity):
     @property
     def device_class(self) -> BinarySensorDeviceClass:
         return BinarySensorDeviceClass.CONNECTIVITY
+
+    @property
+    def available(self) -> bool:
+        return True
 
     @property
     def is_on(self) -> bool:
