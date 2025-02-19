@@ -51,13 +51,14 @@ class BaseCoordinator(DataUpdateCoordinator):
 
     def start(self):
         """Add listener to keep updating without entities."""
-        if not self._listeners:
+        if not self._remove_listener:
             self._remove_listener = self.async_add_listener(lambda: None)
 
     def stop(self):
         """Remove listener to stop updating."""
-        if self._listeners:
+        if self._remove_listener:
             self._remove_listener()
+            self._remove_listener = None
 
     async def async_shutdown(self):
         """Stop and shutdown."""
