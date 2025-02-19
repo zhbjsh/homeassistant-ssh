@@ -12,9 +12,9 @@ from ssh_terminal_manager import (
     DEFAULT_PORT,
     Collection,
     CommandLoopError,
-    InvalidSensorError,
     NameKeyError,
     OfflineError,
+    SensorError,
     SSHAuthenticationError,
     SSHConnectError,
     SSHHostKeyUnknownError,
@@ -473,8 +473,8 @@ class OptionsFlow(config_entries.OptionsFlow):
             except CommandLoopError as exc:
                 errors["base"] = "command_loop_error"
                 placeholders["details"] = f"({exc.details})"
-            except InvalidSensorError as exc:
-                errors["base"] = "invalid_sensor_error"
+            except SensorError as exc:
+                errors["base"] = "sensor_error"
                 placeholders["key"] = exc.key
                 placeholders["details"] = f"({exc.details})"
             except Exception:
