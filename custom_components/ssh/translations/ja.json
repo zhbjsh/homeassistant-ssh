@@ -64,6 +64,7 @@
                     "allow_turn_off": "デバイスの電源オフを許可する",
                     "command_timeout": "コマンドのタイムアウト",
                     "disconnect_mode": "コマンドの間に切断する（実験的）",
+                    "power_button": "Use power button instead of switch",
                     "reset_commands": "コマンドをリセットする",
                     "sensor_commands": "センサーコマンド",
                     "update_interval": "更新間隔"

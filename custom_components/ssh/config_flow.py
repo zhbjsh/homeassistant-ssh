@@ -100,6 +100,7 @@ from .const import (
     CONF_LOAD_SYSTEM_HOST_KEYS,
     CONF_OPTIONS,
     CONF_PATTERN,
+    CONF_POWER_BUTTON,
     CONF_REMOVE_CUSTOM_COMMANDS,
     CONF_RESET_COMMANDS,
     CONF_RESET_DEFAULT_COMMANDS,
@@ -113,6 +114,7 @@ from .const import (
     CONF_TIMEOUT_SET,
     CONF_UPDATE_INTERVAL,
     DEFAULT_HOST_KEYS_FILENAME,
+    DEFAULT_POWER_BUTTON,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
 )
@@ -342,6 +344,7 @@ CONFIG_FLOW_NAME_SCHEMA = vol.Schema(
 OPTIONS_FLOW_INIT_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_ALLOW_TURN_OFF): BooleanSelector(),
+        vol.Required(CONF_POWER_BUTTON): BooleanSelector(),
         vol.Required(CONF_DISCONNECT_MODE): BooleanSelector(),
         vol.Required(CONF_UPDATE_INTERVAL): int,
         vol.Required(CONF_COMMAND_TIMEOUT): int,
@@ -522,7 +525,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for SSH."""
 
     VERSION = 2
-    MINOR_VERSION = 1
+    MINOR_VERSION = 2
     logger = _LOGGER
     domain = DOMAIN
     _existing_entry: ConfigEntry | None = None
@@ -569,6 +572,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         converter = Converter(self.hass)
         return {
             CONF_ALLOW_TURN_OFF: manager.allow_turn_off,
+            CONF_POWER_BUTTON: DEFAULT_POWER_BUTTON,
             CONF_DISCONNECT_MODE: manager.disconnect_mode,
             CONF_UPDATE_INTERVAL: DEFAULT_UPDATE_INTERVAL,
             CONF_COMMAND_TIMEOUT: manager.command_timeout,

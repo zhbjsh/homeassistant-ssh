@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ssh_terminal_manager import BinarySensor
+from ssh_terminal_manager import ActionKey, BinarySensor
 
 from homeassistant.components.switch import ENTITY_ID_FORMAT, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
@@ -12,7 +12,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .base_entity import BaseSensorEntity
+from .base_entity import BaseEntity, BaseSensorEntity
+from .const import CONF_POWER_BUTTON
 from .entry_data import EntryData
 from .helpers import get_child_add_handler, get_child_remove_handler
 
@@ -25,6 +26,10 @@ async def async_setup_entry(
     """Set up the switch platform."""
     entry_data: EntryData = hass.data[entry.domain][entry.entry_id]
     entities = await async_get_entities(hass, entry_data)
+
+    if not entry.options[CONF_POWER_BUTTON]:
+        entities.append(PowerEntity(entry_data))
+
     async_add_entities(entities)
 
 
@@ -66,3 +71,32 @@ class Entity(BaseSensorEntity, SwitchEntity):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         await self.coordinator.async_set_sensor_value(self.key, False)
+
+
+class PowerEntity(BaseEntity, SwitchEntity):
+    _entity_id_format = ENTITY_ID_FORMAT
+    _attr_name = "Power"
+
+    @property
+    def icon(self) -> str:
+        return "mdi:power"
+
+    @property
+    def is_on(self) -> bool | None:
+        return self._manager.is_up
+
+    @property
+    def available(self) -> bool:
+        if self._manager.is_down:
+            return True
+        return (
+            self._manager.is_up
+            and self._manager.allow_turn_off
+            and ActionKey.TURN_OFF in self._manager.action_commands_by_key
+        )
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        await self.coordinator.async_turn_on()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self.coordinator.async_turn_off()

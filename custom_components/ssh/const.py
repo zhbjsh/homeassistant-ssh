@@ -4,6 +4,7 @@ DOMAIN = "ssh"
 
 DEFAULT_HOST_KEYS_FILENAME = "known_hosts"
 DEFAULT_UPDATE_INTERVAL = 30
+DEFAULT_POWER_BUTTON = True
 
 CONF_ACTION_COMMANDS = "action_commands"
 CONF_ADD_HOST_KEYS = "add_host_keys"
@@ -23,6 +24,7 @@ CONF_LATEST = "latest"
 CONF_LOAD_SYSTEM_HOST_KEYS = "load_system_host_keys"
 CONF_OPTIONS = "options"
 CONF_PATTERN = "pattern"
+CONF_POWER_BUTTON = "power_button"
 CONF_REMOVE_CUSTOM_COMMANDS = "remove_custom_commands"
 CONF_RESET_COMMANDS = "reset_commands"
 CONF_RESET_DEFAULT_COMMANDS = "reset_default_commands"

@@ -55,6 +55,7 @@
       "init": {
         "data": {
           "allow_turn_off": "Allow to turn the device off",
+          "power_button": "Use power button instead of switch",
           "disconnect_mode": "Disconnect between commands (experimental)",
           "update_interval": "Update interval",
           "command_timeout": "Command timeout",

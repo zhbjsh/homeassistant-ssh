@@ -52,6 +52,7 @@ from .const import (
     CONF_KEY,
     CONF_KEY_FILENAME,
     CONF_LOAD_SYSTEM_HOST_KEYS,
+    CONF_POWER_BUTTON,
     CONF_SENSOR_COMMANDS,
     CONF_SENSORS,
     CONF_SEPARATOR,
@@ -156,6 +157,17 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
 
         hass.config_entries.async_update_entry(
             entry, data=new_data, options=new_options, minor_version=1, version=2
+        )
+
+    if entry.version == 2:
+        new_data = {**entry.data}
+        new_options = {**entry.options}
+
+        if entry.minor_version < 2:
+            new_options[CONF_POWER_BUTTON] = True
+
+        hass.config_entries.async_update_entry(
+            entry, data=new_data, options=new_options, minor_version=2, version=2
         )
 
     _LOGGER.debug(
