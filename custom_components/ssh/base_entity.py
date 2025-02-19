@@ -67,10 +67,12 @@ class BaseEntity(CoordinatorEntity):
         self.schedule_update_ha_state()
 
     async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
         self._manager.state.on_change.subscribe(self._handle_manager_state_change)
 
     async def async_will_remove_from_hass(self) -> None:
         self._manager.state.on_change.unsubscribe(self._handle_manager_state_change)
+        await super().async_will_remove_from_hass()
 
 
 class BaseActionEntity(BaseEntity):
@@ -132,5 +134,5 @@ class BaseSensorEntity(BaseEntity):
         self._sensor.on_update.subscribe(self._handle_sensor_update)
 
     async def async_will_remove_from_hass(self) -> None:
-        await super().async_will_remove_from_hass()
         self._sensor.on_update.unsubscribe(self._handle_sensor_update)
+        await super().async_will_remove_from_hass()

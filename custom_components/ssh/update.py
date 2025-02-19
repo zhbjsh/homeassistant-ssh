@@ -94,10 +94,12 @@ class Entity(BaseSensorEntity, UpdateEntity):
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
+
         if self._latest_sensor:
             self._latest_sensor.on_update.subscribe(self._handle_sensor_update)
 
     async def async_will_remove_from_hass(self) -> None:
-        await super().async_will_remove_from_hass()
         if self._latest_sensor:
             self._latest_sensor.on_update.unsubscribe(self._handle_sensor_update)
+
+        await super().async_will_remove_from_hass()
