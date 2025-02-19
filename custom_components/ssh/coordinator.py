@@ -45,10 +45,9 @@ class BaseCoordinator(DataUpdateCoordinator):
         self.start()
 
     @property
-    def _coordinators(self) -> list[BaseCoordinator]:
+    def _entry_data(self) -> EntryData:
         entry = self.config_entry
-        entry_data: EntryData = self.hass.data[entry.domain][entry.entry_id]
-        return entry_data.coordinators
+        return self.hass.data[entry.domain][entry.entry_id]
 
     def start(self):
         """Add listener to keep updating without entities."""
@@ -60,10 +59,10 @@ class BaseCoordinator(DataUpdateCoordinator):
         if self._listeners:
             self._remove_listener()
 
-    def stop_all(self) -> None:
-        """Stop all coordinators."""
-        for coordinator in self._coordinators:
-            coordinator.stop()
+    async def async_shutdown(self):
+        """Stop and shutdown."""
+        self.stop()
+        return await super().async_shutdown()
 
 
 class StateCoordinator(BaseCoordinator):
