@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from ssh_terminal_manager import (
     CommandError,
     CommandOutput,
+    ExecutionError,
     SensorCommand,
     SSHAuthenticationError,
     SSHHostKeyUnknownError,
@@ -136,7 +137,7 @@ class StateCoordinator(BaseCoordinator):
             await self._manager.async_set_sensor_value(key, value, raise_errors=True)
         except (TypeError, ValueError) as exc:
             raise ServiceValidationError(exc) from exc
-        except CommandError as exc:
+        except (CommandError, ExecutionError) as exc:
             raise HomeAssistantError(exc) from exc
 
 
@@ -160,7 +161,7 @@ class SensorCommandCoordinator(BaseCoordinator):
             return
         try:
             await self._manager.async_execute_command(self._command)
-        except CommandError as exc:
+        except (CommandError, ExecutionError) as exc:
             cause = exc.__cause__
             if isinstance(cause, (SSHAuthenticationError, SSHHostKeyUnknownError)):
                 self.stop_all()
