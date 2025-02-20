@@ -11,7 +11,7 @@ from ssh_terminal_manager import (
     DEFAULT_LOAD_SYSTEM_HOST_KEYS,
     DEFAULT_PORT,
     Collection,
-    CommandLoopError,
+    CommandError,
     NameKeyError,
     OfflineError,
     SensorError,
@@ -470,8 +470,8 @@ class OptionsFlow(config_entries.OptionsFlow):
                 self._data = self.validate_init(user_input)
             except NameKeyError:
                 errors["base"] = "name_key_error"
-            except CommandLoopError as exc:
-                errors["base"] = "command_loop_error"
+            except CommandError as exc:
+                errors["base"] = "command_error"
                 placeholders["details"] = f"({exc.details})"
             except SensorError as exc:
                 errors["base"] = "sensor_error"

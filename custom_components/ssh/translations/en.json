@@ -52,7 +52,7 @@
     },
     "options": {
         "error": {
-            "command_loop_error": "Command loop detected {details}",
+            "command_error": "Command error {details}",
             "sensor_error": "Sensor {key} is invalid {details}",
             "name_key_error": "Name and key not defined",
             "unknown": "Unexpected error"

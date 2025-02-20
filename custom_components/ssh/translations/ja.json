@@ -52,7 +52,7 @@
     },
     "options": {
         "error": {
-            "command_loop_error": "コマンドのループが検出されました {details}",
+            "command_error": "Command error {details}",
             "sensor_error": "センサー {key} は無効です {details}",
             "name_key_error": "名前とキーが定義されていません",
             "unknown": "予期せぬエラー"
