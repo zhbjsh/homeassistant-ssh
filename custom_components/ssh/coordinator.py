@@ -50,6 +50,11 @@ class BaseCoordinator(DataUpdateCoordinator):
         entry = self.config_entry
         return self.hass.data[entry.domain][entry.entry_id]
 
+    async def _async_handle_auth_error(self, exc) -> None:
+        if isinstance(exc, (SSHHostKeyUnknownError, SSHAuthenticationError)):
+            await self._entry_data.async_shutdown()
+            raise ConfigEntryAuthFailed(exc) from exc
+
     def start(self):
         """Add listener to keep updating without entities."""
         if not self._remove_listener:
@@ -87,10 +92,8 @@ class StateCoordinator(BaseCoordinator):
     async def _async_update_data(self) -> None:
         try:
             await self._manager.async_update_state()
-        except (SSHAuthenticationError, SSHHostKeyUnknownError) as exc:
-            self.stop_all()
-            raise ConfigEntryAuthFailed(exc) from exc
         except Exception as exc:
+            await self._async_handle_auth_error(exc)
             raise UpdateFailed(f"Exception updating {self.name}: {exc}") from exc
 
         if self._fast_update is None:
@@ -162,12 +165,7 @@ class SensorCommandCoordinator(BaseCoordinator):
         try:
             await self._manager.async_execute_command(self._command)
         except (CommandError, ExecutionError) as exc:
-            cause = exc.__cause__
-            if isinstance(cause, (SSHAuthenticationError, SSHHostKeyUnknownError)):
-                self.stop_all()
-                raise ConfigEntryAuthFailed(exc) from exc
-        except (SSHAuthenticationError, SSHHostKeyUnknownError) as exc:
-            self.stop_all()
-            raise ConfigEntryAuthFailed(exc) from exc
+            await self._async_handle_auth_error(exc.__cause__)
         except Exception as exc:
+            await self._async_handle_auth_error(exc)
             raise UpdateFailed(f"Exception updating {self.name}: {exc}") from exc
