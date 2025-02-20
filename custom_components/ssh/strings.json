@@ -74,7 +74,7 @@
     },
     "error": {
       "command_error": "Command error {details}",
-      "sensor_error": "Sensor {key} is invalid {details}",
+      "sensor_error": "Sensor error: {key} {details}",
       "name_key_error": "Name and key not defined",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     }
