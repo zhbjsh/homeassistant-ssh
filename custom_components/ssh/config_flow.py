@@ -12,6 +12,7 @@ from ssh_terminal_manager import (
     DEFAULT_PORT,
     Collection,
     CommandError,
+    ExecutionError,
     NameKeyError,
     OfflineError,
     SensorError,
@@ -609,7 +610,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         await manager.async_load_host_keys()
 
         async with manager:
-            await manager.async_update_state(raise_errors=True)
+            await manager.async_update(raise_errors=True)
 
         data = {
             **data,
@@ -688,6 +689,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 placeholders["details"] = f"({exc.details})" if exc.details else ""
             except SSHConnectError as exc:
                 errors["base"] = "ssh_connect_error"
+                placeholders["details"] = f"({exc.details})" if exc.details else ""
+            except ExecutionError as exc:
+                errors["base"] = "execution_error"
                 placeholders["details"] = f"({exc.details})" if exc.details else ""
             except Exception:
                 self.logger.exception("Unexpected exception")

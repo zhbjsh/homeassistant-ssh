@@ -6,6 +6,7 @@
             "reconf_successful": "再設定に成功しました"
         },
         "error": {
+            "execution_error": "Command execution failed {details}",
             "mac_address_invalid_error": "MACアドレスが無効です",
             "name_exists_error": "名前はすでに存在します",
             "offline_error": "ホスト {host} はオフラインです",

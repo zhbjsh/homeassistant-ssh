@@ -6,6 +6,7 @@
             "reconf_successful": "Reconfiguration was successful"
         },
         "error": {
+            "execution_error": "Command execution failed {details}",
             "mac_address_invalid_error": "MAC address is invalid",
             "name_exists_error": "Name exists already",
             "offline_error": "Host {host} is offline",

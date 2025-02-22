@@ -40,6 +40,7 @@
       "ssh_host_key_unknown_error": "SSH host key of {host} is unknown",
       "ssh_authentication_error": "SSH authentication failed {details}",
       "ssh_connect_error": "SSH connection failed {details}",
+      "execution_error": "Command execution failed {details}",
       "mac_address_invalid_error": "MAC address is invalid",
       "name_exists_error": "Name exists already",
       "unknown": "[%key:common::config_flow::error::unknown%]"

@@ -91,7 +91,7 @@ class StateCoordinator(BaseCoordinator):
 
     async def _async_update_data(self) -> None:
         try:
-            await self._manager.async_update_state()
+            await self._manager.async_update(once=True, test=True)
         except Exception as exc:
             await self._async_handle_auth_error(exc)
             raise UpdateFailed(f"Exception updating {self.name}: {exc}") from exc
