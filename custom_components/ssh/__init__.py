@@ -94,6 +94,7 @@ DEVICE_SENSOR_KEYS = [
     SensorKey.MACHINE_TYPE,
     SensorKey.OS_NAME,
     SensorKey.OS_VERSION,
+    SensorKey.OS_RELEASE,
     SensorKey.DEVICE_NAME,
     SensorKey.DEVICE_MODEL,
     SensorKey.MANUFACTURER,

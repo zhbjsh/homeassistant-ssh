@@ -57,8 +57,11 @@ def get_device_info(manager: SSHManager) -> dict:
     def get_sw_version() -> str | None:
         os_name = manager.os_name
         os_version = manager.os_version
+        os_release = manager.os_release
         return (
-            f"{os_name} {os_version}"
+            os_release
+            if os_release
+            else f"{os_name} {os_version}"
             if os_name and os_version
             else os_name or os_version
         )
