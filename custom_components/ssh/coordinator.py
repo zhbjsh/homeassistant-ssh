@@ -6,7 +6,6 @@ from time import time
 from typing import TYPE_CHECKING, Any
 
 from ssh_terminal_manager import (
-    CommandError,
     CommandOutput,
     ExecutionError,
     SensorCommand,
@@ -140,7 +139,7 @@ class StateCoordinator(BaseCoordinator):
             await self._manager.async_set_sensor_value(key, value, raise_errors=True)
         except (TypeError, ValueError) as exc:
             raise ServiceValidationError(exc) from exc
-        except (CommandError, ExecutionError) as exc:
+        except ExecutionError as exc:
             raise HomeAssistantError(exc) from exc
 
 
@@ -164,7 +163,7 @@ class SensorCommandCoordinator(BaseCoordinator):
             return
         try:
             await self._manager.async_execute_command(self._command)
-        except (CommandError, ExecutionError) as exc:
+        except ExecutionError as exc:
             await self._async_handle_auth_error(exc.__cause__)
         except Exception as exc:
             await self._async_handle_auth_error(exc)
