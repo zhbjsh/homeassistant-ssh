@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import timedelta
-from time import time
 from typing import TYPE_CHECKING, Any
 
 from ssh_terminal_manager import (
@@ -21,8 +20,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 if TYPE_CHECKING:
     from .entry_data import EntryData
 
-FAST_UPDATE_INTERVAL = 2
-FAST_UPDATE_MAXIMUM = 60
+FAST_UPDATE_INTERVAL = timedelta(seconds=1)
 
 
 class BaseCoordinator(DataUpdateCoordinator):
@@ -72,8 +70,6 @@ class BaseCoordinator(DataUpdateCoordinator):
 
 
 class StateCoordinator(BaseCoordinator):
-    _fast_update: tuple[float, Callable[[None], bool]] | None = None
-
     def __init__(
         self,
         hass: HomeAssistant,
@@ -95,43 +91,27 @@ class StateCoordinator(BaseCoordinator):
             await self._async_handle_auth_error(exc)
             raise UpdateFailed(f"Exception updating {self.name}: {exc}") from exc
 
-        if self._fast_update is None:
-            return
-
-        start_time, complete = self._fast_update
-
-        if complete() or time() - start_time > FAST_UPDATE_MAXIMUM:
-            self._fast_update = None
+        if self._manager.state.request:
+            self.update_interval = FAST_UPDATE_INTERVAL
+        else:
             self.update_interval = self._regular_update_interval
 
-    async def _async_start_fast_update(self, complete: Callable[[None], bool]) -> None:
-        self._fast_update = time(), complete
-        self.update_interval = timedelta(seconds=FAST_UPDATE_INTERVAL)
+    async def async_turn_on(self) -> None:
+        """Turn on."""
+        await self._manager.async_turn_on()
         await self.async_request_refresh()
 
-    async def async_turn_on(self) -> None:
-        """Turn on.
-
-        Start fast update until the device is up.
-        """
-        await self._async_start_fast_update(lambda: self._manager.is_up)
-        await self._manager.async_turn_on()
-
     async def async_turn_off(self) -> CommandOutput:
-        """Turn off.
-
-        Start fast update until the device is down.
-        """
-        await self._async_start_fast_update(lambda: self._manager.is_down)
-        return await self._manager.async_turn_off()
+        """Turn off."""
+        output = await self._manager.async_turn_off()
+        await self.async_request_refresh()
+        return output
 
     async def async_restart(self) -> CommandOutput:
-        """Restart.
-
-        Start fast update until the device is down.
-        """
-        await self._async_start_fast_update(lambda: self._manager.is_down)
-        return await self._manager.async_restart()
+        """Restart."""
+        output = await self._manager.async_restart()
+        await self.async_request_refresh()
+        return output
 
     async def async_set_sensor_value(self, key: str, value: Any) -> None:
         """Set sensor value."""
