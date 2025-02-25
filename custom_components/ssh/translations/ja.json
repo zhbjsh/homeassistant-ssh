@@ -77,7 +77,11 @@
                   "reset_default_commands": "デフォルトのコマンドをリセットする",
                   "remove_custom_commands": "すべてのカスタムコマンドを削除する"
                 }
-              }
+            },
+            "reset_error_confirm": {
+                "title": "Reset error",
+                "description": "An error occured while resetting the commands: {error}"
+            }
         }
     }
 }

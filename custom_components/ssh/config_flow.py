@@ -446,6 +446,8 @@ class OptionsFlow(config_entries.OptionsFlow):
             for command in old_custom_collection.sensor_commands:
                 collection.add_sensor_command(command)
 
+        collection.check()
+
         self._data = {
             **self._data,
             CONF_ACTION_COMMANDS: [
@@ -504,10 +506,13 @@ class OptionsFlow(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Handle the reset commands step."""
         if user_input is not None:
-            self.reset_commands(
-                user_input[CONF_RESET_DEFAULT_COMMANDS],
-                user_input[CONF_REMOVE_CUSTOM_COMMANDS],
-            )
+            try:
+                self.reset_commands(
+                    user_input[CONF_RESET_DEFAULT_COMMANDS],
+                    user_input[CONF_REMOVE_CUSTOM_COMMANDS],
+                )
+            except (CommandError, SensorError) as exc:
+                return await self.async_step_reset_error_confirm(exc=exc)
             return self.async_create_entry(title="", data=self._data)
 
         return self.async_show_form(
@@ -520,6 +525,20 @@ class OptionsFlow(config_entries.OptionsFlow):
                 },
             ),
         )
+
+    async def async_step_reset_error_confirm(
+        self,
+        user_input: dict | None = None,
+        exc: Exception | None = None,
+    ) -> FlowResult:
+        """Dialog that informs the user that the reset failed."""
+        if user_input is None:
+            return self.async_show_form(
+                step_id="reset_error_confirm",
+                data_schema=vol.Schema({}),
+                description_placeholders={"error": str(exc)},
+            )
+        return await self.async_step_init()
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
