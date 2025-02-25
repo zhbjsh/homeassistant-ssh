@@ -98,18 +98,27 @@ class StateCoordinator(BaseCoordinator):
 
     async def async_turn_on(self) -> None:
         """Turn on."""
-        await self._manager.async_turn_on()
+        try:
+            await self._manager.async_turn_on()
+        except ValueError as exc:
+            raise HomeAssistantError(exc) from exc
         await self.async_request_refresh()
 
     async def async_turn_off(self) -> CommandOutput:
         """Turn off."""
-        output = await self._manager.async_turn_off()
+        try:
+            output = await self._manager.async_turn_off()
+        except (PermissionError, KeyError, ExecutionError) as exc:
+            raise HomeAssistantError(exc) from exc
         await self.async_request_refresh()
         return output
 
     async def async_restart(self) -> CommandOutput:
         """Restart."""
-        output = await self._manager.async_restart()
+        try:
+            output = await self._manager.async_restart()
+        except (KeyError, ExecutionError) as exc:
+            raise HomeAssistantError(exc) from exc
         await self.async_request_refresh()
         return output
 
@@ -146,5 +155,4 @@ class SensorCommandCoordinator(BaseCoordinator):
         except ExecutionError as exc:
             await self._async_handle_auth_error(exc.__cause__)
         except Exception as exc:
-            await self._async_handle_auth_error(exc)
             raise UpdateFailed(f"Exception updating {self.name}: {exc}") from exc
