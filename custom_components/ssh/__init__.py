@@ -389,7 +389,8 @@ def async_register_services(hass: HomeAssistant, domain: str):
             {
                 "entity_id": entity.entity_id,
                 "entity_name": entity.name,
-                "success": sensors[i].value is not None,
+                "success": (error := errors[i]) is None,
+                **({"error": str(error)} if error else {}),
             }
             for i, entity in enumerate(selected_entities)
         ]
