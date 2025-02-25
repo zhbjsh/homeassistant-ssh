@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ssh_terminal_manager import TextSensor, VersionSensor
+from ssh_terminal_manager import TextSensor
 
 from homeassistant.components.text import ENTITY_ID_FORMAT, TextEntity, TextMode
 from homeassistant.config_entries import ConfigEntry

@@ -41,7 +41,7 @@ from homeassistant.helpers.service import (
     async_extract_entities,
 )
 
-from .base_entity import BaseActionEntity, BaseEntity, BaseSensorEntity
+from .base_entity import BaseSensorEntity
 from .const import (
     CONF_ALLOW_TURN_OFF,
     CONF_COMMAND_TIMEOUT,
@@ -69,12 +69,9 @@ from .converter import Converter
 from .coordinator import SensorCommandCoordinator, StateCoordinator
 from .entry_data import EntryData
 from .helpers import (
-    get_child_add_handler,
-    get_child_remove_handler,
     get_command_renderer,
     get_device_info,
     get_device_sensor_update_handler,
-    get_value_renderer,
 )
 
 _LOGGER = logging.getLogger(__name__)
