@@ -101,14 +101,16 @@ class StateCoordinator(BaseCoordinator):
         try:
             await self._manager.async_turn_on()
         except ValueError as exc:
-            raise HomeAssistantError(exc) from exc
+            raise ServiceValidationError(exc) from exc
         await self.async_request_refresh()
 
     async def async_turn_off(self) -> CommandOutput:
         """Turn off."""
         try:
             output = await self._manager.async_turn_off()
-        except (PermissionError, KeyError, ExecutionError) as exc:
+        except (PermissionError, KeyError) as exc:
+            raise ServiceValidationError(exc) from exc
+        except ExecutionError as exc:
             raise HomeAssistantError(exc) from exc
         await self.async_request_refresh()
         return output
@@ -117,7 +119,9 @@ class StateCoordinator(BaseCoordinator):
         """Restart."""
         try:
             output = await self._manager.async_restart()
-        except (KeyError, ExecutionError) as exc:
+        except KeyError as exc:
+            raise ServiceValidationError(exc) from exc
+        except ExecutionError as exc:
             raise HomeAssistantError(exc) from exc
         await self.async_request_refresh()
         return output
@@ -126,7 +130,7 @@ class StateCoordinator(BaseCoordinator):
         """Set sensor value."""
         try:
             await self._manager.async_set_sensor_value(key, value, raise_errors=True)
-        except (TypeError, ValueError) as exc:
+        except (KeyError, TypeError, ValueError) as exc:
             raise ServiceValidationError(exc) from exc
         except ExecutionError as exc:
             raise HomeAssistantError(exc) from exc
