@@ -87,9 +87,7 @@ class PowerEntity(BaseEntity, SwitchEntity):
 
     @property
     def available(self) -> bool:
-        if self._manager.is_down:
-            return True
-        return (
+        return self._manager.is_down or (
             self._manager.is_up
             and self._manager.allow_turn_off
             and ActionKey.TURN_OFF in self._manager.action_commands_by_key
