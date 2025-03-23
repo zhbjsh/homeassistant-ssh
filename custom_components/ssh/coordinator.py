@@ -5,11 +5,12 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 from ssh_terminal_manager import (
+    AuthenticationError,
     CommandOutput,
+    ConnectError,
     ExecutionError,
+    OfflineError,
     SensorCommand,
-    SSHAuthenticationError,
-    SSHHostKeyUnknownError,
     SSHManager,
 )
 
@@ -35,7 +36,7 @@ class BaseCoordinator(DataUpdateCoordinator):
     ) -> None:
         super().__init__(
             hass,
-            manager.logger,
+            manager._logger,
             name=name,
             update_interval=update_interval,
         )
@@ -47,26 +48,21 @@ class BaseCoordinator(DataUpdateCoordinator):
         entry = self.config_entry
         return self.hass.data[entry.domain][entry.entry_id]
 
-    async def _async_handle_auth_error(self, exc) -> None:
-        if isinstance(exc, (SSHHostKeyUnknownError, SSHAuthenticationError)):
-            await self._entry_data.async_shutdown()
-            raise ConfigEntryAuthFailed(exc) from exc
-
-    def start(self):
+    def start(self) -> None:
         """Add listener to keep updating without entities."""
         if not self._remove_listener:
             self._remove_listener = self.async_add_listener(lambda: None)
 
-    def stop(self):
+    def stop(self) -> None:
         """Remove listener to stop updating."""
         if self._remove_listener:
             self._remove_listener()
             self._remove_listener = None
 
-    async def async_shutdown(self):
+    async def async_shutdown(self) -> None:
         """Stop and shutdown."""
         self.stop()
-        return await super().async_shutdown()
+        await super().async_shutdown()
 
 
 class StateCoordinator(BaseCoordinator):
@@ -87,8 +83,12 @@ class StateCoordinator(BaseCoordinator):
     async def _async_update_data(self) -> None:
         try:
             await self._manager.async_update(once=True, test=True)
+        except AuthenticationError as exc:
+            await self._entry_data.async_shutdown()
+            raise ConfigEntryAuthFailed(exc) from exc
+        except (OfflineError, ConnectError, ExecutionError):
+            pass
         except Exception as exc:
-            await self._async_handle_auth_error(exc)
             raise UpdateFailed(f"Exception updating {self.name}: {exc}") from exc
 
         if self._manager.state.request:
@@ -102,6 +102,7 @@ class StateCoordinator(BaseCoordinator):
             await self._manager.async_turn_on()
         except ValueError as exc:
             raise ServiceValidationError(exc) from exc
+
         await self.async_request_refresh()
 
     async def async_turn_off(self) -> CommandOutput:
@@ -110,8 +111,12 @@ class StateCoordinator(BaseCoordinator):
             output = await self._manager.async_turn_off()
         except (PermissionError, KeyError) as exc:
             raise ServiceValidationError(exc) from exc
-        except ExecutionError as exc:
+        except AuthenticationError as exc:
+            await self._entry_data.async_shutdown()
+            raise ConfigEntryAuthFailed(exc) from exc
+        except (ConnectError, ExecutionError) as exc:
             raise HomeAssistantError(exc) from exc
+
         await self.async_request_refresh()
         return output
 
@@ -121,18 +126,25 @@ class StateCoordinator(BaseCoordinator):
             output = await self._manager.async_restart()
         except KeyError as exc:
             raise ServiceValidationError(exc) from exc
-        except ExecutionError as exc:
+        except AuthenticationError as exc:
+            await self._entry_data.async_shutdown()
+            raise ConfigEntryAuthFailed(exc) from exc
+        except (ConnectError, ExecutionError) as exc:
             raise HomeAssistantError(exc) from exc
+
         await self.async_request_refresh()
         return output
 
     async def async_set_sensor_value(self, key: str, value: Any) -> None:
         """Set sensor value."""
         try:
-            await self._manager.async_set_sensor_value(key, value, raise_errors=True)
+            await self._manager.async_set_sensor_value(key, value)
         except (KeyError, TypeError, ValueError) as exc:
             raise ServiceValidationError(exc) from exc
-        except ExecutionError as exc:
+        except AuthenticationError as exc:
+            await self._entry_data.async_shutdown()
+            raise ConfigEntryAuthFailed(exc) from exc
+        except (ConnectError, ExecutionError) as exc:
             raise HomeAssistantError(exc) from exc
 
 
@@ -152,11 +164,14 @@ class SensorCommandCoordinator(BaseCoordinator):
         self._command = command
 
     async def _async_update_data(self) -> None:
-        if not self._manager.is_up:
+        if not self._manager.can_execute:
             return
         try:
             await self._manager.async_execute_command(self._command)
-        except ExecutionError as exc:
-            await self._async_handle_auth_error(exc.__cause__)
+        except AuthenticationError as exc:
+            await self._entry_data.async_shutdown()
+            raise ConfigEntryAuthFailed(exc) from exc
+        except (ConnectError, ExecutionError):
+            pass
         except Exception as exc:
             raise UpdateFailed(f"Exception updating {self.name}: {exc}") from exc

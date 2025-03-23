@@ -6,14 +6,14 @@
             "reconf_successful": "再設定に成功しました"
         },
         "error": {
-            "execution_error": "Command execution failed {details}",
+            "authentication_error": "Authentication failed {details}",
+            "connect_error": "Connection failed {details}",
+            "execution_error": "Execution failed {details}",
+            "host_key_unknown_error": "Host key of {host} is unknown",
             "mac_address_invalid_error": "MACアドレスが無効です",
             "name_exists_error": "名前はすでに存在します",
             "offline_error": "ホスト {host} はオフラインです",
             "permission_error": "ホスト鍵ファイルにアクセスするための権限がありません",
-            "ssh_authentication_error": "SSHの認証に失敗しました {details}",
-            "ssh_connect_error": "SSHの接続に失敗しました {details}",
-            "ssh_host_key_unknown_error": "{host} のSSHホスト鍵が不明です",
             "unknown": "予期せぬエラー"
         },
         "step": {

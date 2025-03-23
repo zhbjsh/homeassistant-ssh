@@ -11,6 +11,7 @@ from ssh_terminal_manager import (
     CommandOutput,
     SensorKey,
     SSHManager,
+    SSHTerminal,
 )
 import voluptuous as vol
 
@@ -182,9 +183,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     data = entry.data
     options = entry.options
 
-    manager = SSHManager(
+    terminal = SSHTerminal(
         data[CONF_HOST],
-        name=data[CONF_NAME],
         port=data[CONF_PORT],
         username=data.get(CONF_USERNAME),
         password=data.get(CONF_PASSWORD),
@@ -192,14 +192,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         host_keys_filename=data.get(CONF_HOST_KEYS_FILENAME),
         load_system_host_keys=data[CONF_LOAD_SYSTEM_HOST_KEYS],
         invoke_shell=data[CONF_INVOKE_SHELL],
-        allow_turn_off=options[CONF_ALLOW_TURN_OFF],
+    )
+
+    manager = SSHManager(
+        terminal,
+        name=data[CONF_NAME],
         command_timeout=options[CONF_COMMAND_TIMEOUT],
+        allow_turn_off=options[CONF_ALLOW_TURN_OFF],
         disconnect_mode=options[CONF_DISCONNECT_MODE],
+        mac_address=data[CONF_MAC],
         collection=Converter(hass).get_collection(options),
         logger=_LOGGER,
     )
-
-    manager.set_mac_address(data[CONF_MAC])
 
     await manager.async_load_host_keys()
 

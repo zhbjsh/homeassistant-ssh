@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ssh_terminal_manager import ActionKey, BinarySensor
+from ssh_terminal_manager import BinarySensor
 
 from homeassistant.components.switch import ENTITY_ID_FORMAT, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
@@ -83,15 +83,11 @@ class PowerEntity(BaseEntity, SwitchEntity):
 
     @property
     def is_on(self) -> bool | None:
-        return self._manager.is_up
+        return self._manager.can_execute
 
     @property
     def available(self) -> bool:
-        return self._manager.is_down or (
-            self._manager.is_up
-            and self._manager.allow_turn_off
-            and ActionKey.TURN_OFF in self._manager.action_commands_by_key
-        )
+        return self._manager.can_turn_on or self._manager.can_turn_off
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self.coordinator.async_turn_on()

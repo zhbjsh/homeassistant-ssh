@@ -67,14 +67,10 @@ class PowerEntity(BaseEntity, ButtonEntity):
 
     @property
     def available(self) -> bool:
-        return self._manager.is_down or (
-            self._manager.is_up
-            and self._manager.allow_turn_off
-            and ActionKey.TURN_OFF in self._manager.action_commands_by_key
-        )
+        return self._manager.can_turn_on or self._manager.can_turn_off
 
     async def async_press(self) -> None:
-        if self._manager.is_down:
+        if not self._manager.state.online:
             await self.coordinator.async_turn_on()
-        elif self._manager.is_up:
+        else:
             await self.coordinator.async_turn_off()

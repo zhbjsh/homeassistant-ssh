@@ -26,8 +26,8 @@ class EntryData:
         return [self.state_coordinator, *self.command_coordinators]
 
     async def async_shutdown(self) -> None:
-        """Shutdown all coordinators and close manager."""
+        """Shutdown all coordinators and reset manager."""
         for coordinator in self.coordinators:
             await coordinator.async_shutdown()
 
-        await self.manager.async_close()
+        await self.manager.async_reset()

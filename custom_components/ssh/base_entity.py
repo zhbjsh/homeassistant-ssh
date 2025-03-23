@@ -65,7 +65,7 @@ class BaseEntity(CoordinatorEntity):
 
     @property
     def available(self) -> bool:
-        return self._manager.is_up
+        return self._manager.can_execute
 
     def _handle_manager_state_change(self, state: State) -> None:
         self.schedule_update_ha_state()
