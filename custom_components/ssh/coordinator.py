@@ -36,7 +36,7 @@ class BaseCoordinator(DataUpdateCoordinator):
     ) -> None:
         super().__init__(
             hass,
-            manager._logger,
+            manager.logger,
             name=name,
             update_interval=update_interval,
         )
