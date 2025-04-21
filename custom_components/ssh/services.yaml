@@ -63,6 +63,7 @@ poll_sensor:
         - sensor
         - switch
         - text
+        - update
 
 set_value:
   name: Set value
