@@ -84,7 +84,6 @@ class StateCoordinator(BaseCoordinator):
         try:
             await self._manager.async_update(once=True, test=True)
         except AuthenticationError as exc:
-            await self._entry_data.async_shutdown()
             raise ConfigEntryAuthFailed(exc) from exc
         except (OfflineError, ConnectError, ExecutionError):
             pass
@@ -112,7 +111,6 @@ class StateCoordinator(BaseCoordinator):
         except (PermissionError, KeyError) as exc:
             raise ServiceValidationError(exc) from exc
         except AuthenticationError as exc:
-            await self._entry_data.async_shutdown()
             raise ConfigEntryAuthFailed(exc) from exc
         except (ConnectError, ExecutionError) as exc:
             raise HomeAssistantError(exc) from exc
@@ -127,7 +125,6 @@ class StateCoordinator(BaseCoordinator):
         except KeyError as exc:
             raise ServiceValidationError(exc) from exc
         except AuthenticationError as exc:
-            await self._entry_data.async_shutdown()
             raise ConfigEntryAuthFailed(exc) from exc
         except (ConnectError, ExecutionError) as exc:
             raise HomeAssistantError(exc) from exc
@@ -142,7 +139,6 @@ class StateCoordinator(BaseCoordinator):
         except (KeyError, TypeError, ValueError) as exc:
             raise ServiceValidationError(exc) from exc
         except AuthenticationError as exc:
-            await self._entry_data.async_shutdown()
             raise ConfigEntryAuthFailed(exc) from exc
         except (ConnectError, ExecutionError) as exc:
             raise HomeAssistantError(exc) from exc
@@ -169,7 +165,6 @@ class SensorCommandCoordinator(BaseCoordinator):
         try:
             await self._manager.async_execute_command(self._command)
         except AuthenticationError as exc:
-            await self._entry_data.async_shutdown()
             raise ConfigEntryAuthFailed(exc) from exc
         except (ConnectError, ExecutionError):
             pass
