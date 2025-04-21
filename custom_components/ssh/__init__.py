@@ -34,6 +34,7 @@ from homeassistant.core import (
     HomeAssistant,
     ServiceCall,
     ServiceResponse,
+    ServiceValidationError,
     SupportsResponse,
 )
 from homeassistant.helpers import device_registry as dr, entity_platform
@@ -58,11 +59,13 @@ from .const import (
     CONF_SENSORS,
     CONF_SEPARATOR,
     CONF_UPDATE_INTERVAL,
+    CONF_VALUES,
     DOMAIN,
     SERVICE_EXECUTE_COMMAND,
     SERVICE_POLL_SENSOR,
     SERVICE_RESTART,
     SERVICE_RUN_ACTION,
+    SERVICE_SET_VALUE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
 )
@@ -119,6 +122,13 @@ RUN_ACTION_SCHEMA = vol.Schema(
         vol.Optional(CONF_VARIABLES): dict,
         vol.Optional(ATTR_DEVICE_ID): list,
         vol.Optional(ATTR_ENTITY_ID): list,
+    }
+)
+
+SET_VALUE_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_VALUES): list,
+        vol.Required(ATTR_ENTITY_ID): list,
     }
 )
 
@@ -400,6 +410,34 @@ def async_register_services(hass: HomeAssistant, domain: str):
         ]
 
     @get_response
+    async def set_value(entry_data: EntryData, call: ServiceCall) -> list[dict]:
+        values = call.data[CONF_VALUES]
+        entities = [
+            entity
+            for platform in entity_platform.async_get_platforms(hass, domain)
+            for entity in platform.entities.values()
+            if isinstance(entity, BaseSensorEntity)
+            and entity.coordinator == entry_data.state_coordinator
+        ]
+        selected_entities = await async_extract_entities(hass, entities, call)
+        if len(selected_entities) > len(values):
+            raise ServiceValidationError("Not all values provided")
+        sensor_keys = [entity.key for entity in selected_entities]
+        sensors, errors = await entry_data.manager.async_set_sensor_values(
+            sensor_keys,
+            values,
+        )
+        return [
+            {
+                "entity_id": entity.entity_id,
+                "entity_name": entity.name,
+                "success": (error := errors[i]) is None,
+                **({"error": str(error)} if error else {}),
+            }
+            for i, entity in enumerate(selected_entities)
+        ]
+
+    @get_response
     @get_generic_result
     async def turn_on(entry_data: EntryData, call: ServiceCall) -> None:
         await entry_data.state_coordinator.async_turn_on()
@@ -435,6 +473,14 @@ def async_register_services(hass: HomeAssistant, domain: str):
         SERVICE_POLL_SENSOR,
         poll_sensor,
         None,
+        SupportsResponse.OPTIONAL,
+    )
+
+    hass.services.async_register(
+        domain,
+        SERVICE_SET_VALUE,
+        set_value,
+        SET_VALUE_SCHEMA,
         SupportsResponse.OPTIONAL,
     )
 

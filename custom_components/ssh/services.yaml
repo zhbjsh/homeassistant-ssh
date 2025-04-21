@@ -64,6 +64,27 @@ poll_sensor:
         - switch
         - text
 
+set_value:
+  name: Set value
+  description: Set one or more values.
+  target:
+    device:
+    entity:
+      integration: ssh
+      domain:
+        - number
+        - select
+        - switch
+        - text
+        - update
+  fields:
+    values:
+      name: Values
+      description: Values to set.
+      required: true
+      selector:
+        object:
+
 turn_on:
   name: Turn on
   description: Turn the selected devices on.
