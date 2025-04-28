@@ -67,7 +67,7 @@ poll_sensor:
 
 set_value:
   name: Set value
-  description: Set one or more values.
+  description: Set the value of one or more controllable sensors.
   target:
     device:
     entity:
@@ -81,7 +81,7 @@ set_value:
   fields:
     values:
       name: Values
-      description: Values to set.
+      description: Values in the same order as the target entities.
       required: true
       selector:
         object:
