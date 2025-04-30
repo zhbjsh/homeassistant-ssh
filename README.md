@@ -76,9 +76,9 @@ To avoid unintentional shutdowns, this function is disabled by default. After en
 
 Select this option to reset all actions/sensors whose keys are included in the default commands and update them to their newest version. In the following dialog you can also choose to remove all user defined commands.
 
-##### Disconnect between commands (experimental)
+##### Disconnect between commands
 
-By default, the integration keeps the SSH connection to the device constantly alive. If you want to change this behaviour, you can let the integration disconnect automatically after every command. This is only recommended if you just have a few sensor commands with a long `scan_interval`, as constant connecting/disconnecting will slow down the execution of the commands. _This is an experimental feature which has not been tested thoroughly yet!_
+By default, the integration keeps the SSH connection to the device constantly alive. If you want to change this behaviour, you can let the integration disconnect automatically when there are no commands to execute. This is only recommended if you just have a few sensor commands with a long `scan_interval`, as constant connecting/disconnecting will slow down the execution of the commands.
 
 ##### Update interval
 
@@ -506,6 +506,16 @@ Run an action on the selected devices.
 #### Poll sensor (`ssh.poll_sensor`)
 
 Poll one or more sensors.
+
+#### Set value (`ssh.set_value`)
+
+Set the value of one or more controllable sensors.
+
+##### Data
+
+| Name     | Description                                      | Type   | Required | Default |
+| -------- | ------------------------------------------------ | ------ | -------- | ------- |
+| `values` | Values in the same order as the target entities. | list   | yes      |         |
 
 #### Turn on (`ssh.turn_on`)
 
