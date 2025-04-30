@@ -64,7 +64,7 @@
                     "action_commands": "Action commands",
                     "allow_turn_off": "Allow to turn the device off",
                     "command_timeout": "Command timeout",
-                    "disconnect_mode": "Disconnect between commands (experimental)",
+                    "disconnect_mode": "Disconnect between commands",
                     "power_button": "Use power button instead of switch",
                     "reset_commands": "Reset commands",
                     "sensor_commands": "Sensor commands",
