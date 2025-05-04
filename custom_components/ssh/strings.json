@@ -71,10 +71,6 @@
           "reset_default_commands": "Reset the default commands",
           "remove_custom_commands": "Remove all custom commands"
         }
-      },
-      "reset_error_confirm": {
-        "title": "Reset error",
-        "description": "An error occured while resetting the commands: {error}"
       }
     },
     "error": {

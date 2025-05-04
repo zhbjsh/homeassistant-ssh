@@ -509,18 +509,31 @@ class OptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the reset commands step."""
+        errors: dict[str, str] = {}
+        placeholders: dict[str, str] = {}
         if user_input is not None:
             try:
                 self.reset_commands(
                     user_input[CONF_RESET_DEFAULT_COMMANDS],
                     user_input[CONF_REMOVE_CUSTOM_COMMANDS],
                 )
-            except (CommandError, SensorError) as exc:
-                return await self.async_step_reset_error_confirm(exc=exc)
-            return self.async_create_entry(title="", data=self._data)
+            except CommandError as exc:
+                errors["base"] = "command_error"
+                placeholders["details"] = f"({exc.details})" if exc.details else ""
+            except SensorError as exc:
+                errors["base"] = "sensor_error"
+                placeholders["key"] = exc.key
+                placeholders["details"] = f"({exc.details})" if exc.details else ""
+            except Exception:
+                self.logger.exception("Unexpected exception")
+                errors["base"] = "unknown"
+            else:
+                return self.async_create_entry(title="", data=self._data)
 
         return self.async_show_form(
             step_id="reset_commands",
+            errors=errors,
+            description_placeholders=placeholders,
             data_schema=self.add_suggested_values_to_schema(
                 OPTIONS_FLOW_RESET_COMMANDS_SCHEMA,
                 {
@@ -529,20 +542,6 @@ class OptionsFlow(config_entries.OptionsFlow):
                 },
             ),
         )
-
-    async def async_step_reset_error_confirm(
-        self,
-        user_input: dict | None = None,
-        exc: Exception | None = None,
-    ) -> FlowResult:
-        """Dialog that informs the user that the reset failed."""
-        if user_input is None:
-            return self.async_show_form(
-                step_id="reset_error_confirm",
-                data_schema=vol.Schema({}),
-                description_placeholders={"error": str(exc)},
-            )
-        return await self.async_step_init()
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
