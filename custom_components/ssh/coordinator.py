@@ -11,6 +11,7 @@ from ssh_terminal_manager import (
     ExecutionError,
     OfflineError,
     SensorCommand,
+    SensorError,
     SSHManager,
 )
 
@@ -136,7 +137,7 @@ class StateCoordinator(BaseCoordinator):
         """Set sensor value."""
         try:
             await self._manager.async_set_sensor_value(key, value)
-        except (KeyError, TypeError, ValueError) as exc:
+        except (KeyError, SensorError, TypeError, ValueError) as exc:
             raise ServiceValidationError(exc) from exc
         except AuthenticationError as exc:
             raise ConfigEntryAuthFailed(exc) from exc
