@@ -26,7 +26,7 @@ Install [HACS](https://hacs.xyz/docs/use/download/download) and open it in Home 
 
 ##### From Github
 
-Download the [latest release](https://github.com/zhbjsh/homeassistant-ssh/releases/latest) and copy the `custom_components/ssh` folder from the zip file to `config/custom_components/` on your Home Assistant installation. Don't forget to restart Home Assistant after you're done.
+Download the [latest release](https://github.com/zhbjsh/homeassistant-ssh/releases/latest) and copy the `custom_components/ssh` folder from the zip file to `/config/custom_components/` on your Home Assistant installation. Don't forget to restart Home Assistant after you're done.
 
 ## Device setup
 
@@ -36,11 +36,11 @@ Click on the _Add Integration_ button in _Settings_ -> _Devices & Services_ and 
 
 Authentication can be done with username and password or you can use key-based authentication.
 
-###### Username/password authentication
+###### Username/password
 
 Simply enter them in the configuration dialog.
 
-###### Key authentication
+###### Key file
 
 Key files in the Home Assistant users `~/.ssh/` folder are used automatically. To use another location, enter the path to your file (for example `/config/id_rsa`) and make sure the Home Assistant user has access to it.
 
@@ -70,11 +70,11 @@ Devices can be configured by clicking on the _Configure_ button in _Settings_ ->
 
 ##### Allow to turn the device off
 
-To avoid unintentional shutdowns, this function is disabled by default. After enabling it, power button and [`ssh.turn_off`](#turn-off-sshturn_off) service can be used to turn the device off.
+To avoid unintentional shutdowns, this option is disabled by default. After enabling it, power switch/button and [`ssh.turn_off`](#turn-off-sshturn_off) service can be used to turn the device off.
 
-##### Reset commands
+##### Use power button instead of switch
 
-Select this option to reset all actions/sensors whose keys are included in the default commands and update them to their newest version. In the following dialog you can also choose to remove all user defined commands.
+Change between switch and button entity to turn the device on and off.
 
 ##### Disconnect between commands
 
@@ -87,6 +87,10 @@ The update interval is the time in seconds between updates of the device state. 
 ##### Command timeout
 
 The command timeout is the time in seconds that the integration waits for a command to complete. Generally commands should be short (maximum a couple seconds), as they are executed one after another and block the next command while they are running.
+
+##### Reset commands
+
+Select this option to reset all actions/sensors whose keys are included in the default commands and update them to their newest version. In the following dialog you can also choose to remove all user defined commands.
 
 ### Commands
 
@@ -423,28 +427,30 @@ script.sh,74
 app.conf,384
 ```
 
-#### Systemd services
+#### Services
 
-Dynamic sensors can be controllable as well. This command returns name and status of two services and creates a switch entity. To start or stop one of the services, `command_on` and `command_off` are used. The service names are used as ID's and can be accessed in both commands with `@{id}`.
+Dynamic sensors can be controllable as well. This command returns name and status of all installed services and creates a switch entity for each one of them. To start or stop a service, `command_on` and `command_off` are used. The service names are used as ID's and can be accessed in both commands with `@{id}`.
 
 ```yaml
 # Sensor command with controllable dynamic sensor
-- command: systemctl -a | awk '/bluetooth.service|smbd.service/ {print $1 "," $4}'
+- command: /sbin/service --status-all | awk '{print $4 "," $2}'
   scan_interval: 300
   separator: ","
   sensors:
     - type: binary
-      key: service
+      name: Service
       dynamic: true
-      command_on: systemctl start @{id}
-      command_off: systemctl stop @{id}
-      payload_on: running
+      command_on: /sbin/service @{id} start
+      command_off: /sbin/service @{id} stop
+      payload_on: +
 ```
 
 ```shell
 # Example output
-bluetooth.service,running
-smbd.service,dead
+cron,+
+openvpn,-
+smbd,-
+ssh,+
 ```
 
 #### Docker containers
