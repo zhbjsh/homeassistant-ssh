@@ -398,7 +398,10 @@ def async_register_services(hass: HomeAssistant, domain: str):
         ]
         selected_entities = await async_extract_entities(hass, entities, call)
         sensor_keys = [entity.key for entity in selected_entities]
-        sensors, errors = await entry_data.manager.async_poll_sensors(sensor_keys)
+        sensors, errors = await entry_data.manager.async_poll_sensors(
+            sensor_keys,
+            raise_errors=False,
+        )
         return [
             {
                 "entity_id": entity.entity_id,
@@ -426,6 +429,7 @@ def async_register_services(hass: HomeAssistant, domain: str):
         sensors, errors = await entry_data.manager.async_set_sensor_values(
             sensor_keys,
             values,
+            raise_errors=False,
         )
         return [
             {
